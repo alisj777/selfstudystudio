@@ -58,6 +58,8 @@ def _parse_file(path: Path, exam: str) -> tuple[list[Node], list[Edge]]:
                     "criterion": node.id,
                     "band": int(band),
                     "skill": node.attrs.get("skill"),
+                    # provenance is declared once on the criterion
+                    **{k: node.attrs[k] for k in ("source_doc", "source_url") if k in node.attrs},
                     **(spec if isinstance(spec, dict) else {"descriptor": spec}),
                 },
             )

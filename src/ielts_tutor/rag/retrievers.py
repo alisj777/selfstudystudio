@@ -42,8 +42,10 @@ class _Retriever:
         self.glossary = glossary
 
     def _search(self, query: str, k: int, filters: dict | None) -> list[Hit]:
-        bm25_query = self.glossary.expand(query).query if self.glossary else None
-        return self.index.search(query, k, filters, bm25_query=bm25_query)
+        if not self.glossary:
+            return self.index.search(query, k, filters)
+        exp = self.glossary.expand(query)
+        return self.index.search(exp.dense_query or query, k, filters, bm25_query=exp.query)
 
 
 class CorpusRetriever(_Retriever):

@@ -1,15 +1,24 @@
-# Skills, assessment criteria and band descriptors.
+# Skills, assessment criteria and band descriptors (bands 1-9).
 #
-# IMPORTANT: descriptor texts below are PARAPHRASED SUMMARIES of the public
-# IELTS band descriptors, written for retrieval. Before using them for scoring,
-# check each one against the official public band descriptors and add bands 0-4
-# and 9. Keep `source: paraphrase` until an entry has been checked.
+# Descriptor texts are close SUMMARIES of the official public IELTS band descriptors,
+# checked against the documents below on 2026-11-18. They keep every assessable
+# feature but are not verbatim; for exact wording, read the official PDFs.
+#   Writing:  "Writing Band Descriptors, Updated May 2023" (Task 1 pp. 1-3, Task 2 pp. 1-3)
+#   Speaking: "Speaking Band Descriptors" (pp. 1-3)
+# Band 0 is not a performance level: it is given only for non-attendance, no attempt,
+# a response not in English, or a fully memorised answer (writing).
+# Task 1 entries cover the Academic module; General Training (letter) features are omitted.
+# Writing CC / LR / GRA follow the Task 2 wording; `task1_note` records Task 1 differences.
 
 nodes:
   # ---------------- skills ----------------
   - id: skill.writing
     type: Skill
     name: Writing
+    rating_rules:
+      - "A script must fully fit the positive features of the descriptor at a band to receive it; negative features (bold in the official document) limit the rating."
+      - "Responses of 20 words or fewer are rated Band 1 on every criterion; copied rubric is discounted."
+      - "Band 0 only for no attempt, a response not in English, or proof the answer was memorised."
     edges:
       ASSESSED_BY: [crit.writing.TA, crit.writing.TR, crit.writing.CC, crit.writing.LR, crit.writing.GRA]
       HAS_QUESTION_TYPE: [qt.writing.t1.line_graph, qt.writing.t1.bar_chart, qt.writing.t1.pie_chart, qt.writing.t1.table,
@@ -19,6 +28,10 @@ nodes:
   - id: skill.speaking
     type: Skill
     name: Speaking
+    rating_rules:
+      - "A candidate must fully fit the positive features of the descriptor at a band to receive it."
+      - "The candidate is rated on average performance across all parts of the test."
+      - "Band 0 only if the candidate does not attend or does not complete the test."
     edges:
       ASSESSED_BY: [crit.speaking.FC, crit.speaking.LR, crit.speaking.GRA, crit.speaking.P]
       HAS_QUESTION_TYPE: [qt.speaking.part1, qt.speaking.part2, qt.speaking.part3]
@@ -38,30 +51,52 @@ nodes:
                           qt.listening.mcq, qt.listening.map_labelling, qt.listening.diagram_labelling,
                           qt.listening.matching, qt.listening.sentence_completion, qt.listening.short_answer]
 
-  # ---------------- writing criteria ----------------
+  # ================= WRITING =================
   - id: crit.writing.TA
     type: Criterion
     name: Task Achievement
     short: TA
     skill: writing
     applies_to: task1
+    source_doc: "IELTS Writing Band Descriptors, Updated May 2023 (Task 1)"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-writing-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: All task requirements are fully and appropriately met; lapses in content are extremely rare.
+        key_features: [all requirements fully satisfied, extremely rare content lapses]
       8:
-        descriptor: Covers all requirements of the task sufficiently; presents, highlights and illustrates key features clearly and appropriately.
-        key_features: [all requirements covered, key features clearly highlighted, appropriate illustration with data]
-        source: paraphrase
+        page: 1
+        descriptor: Covers all requirements appropriately, relevantly and sufficiently; key features are skilfully selected and clearly presented, highlighted and illustrated; occasional omissions or lapses may occur.
+        key_features: [requirements covered sufficiently, key features skilfully selected and illustrated, occasional omissions]
       7:
-        descriptor: Covers the requirements of the task; presents a clear overview of main trends, differences or stages; clearly presents and highlights key features, though they could be more fully extended.
-        key_features: [clear overview, main trends or stages identified, key features highlighted]
-        source: paraphrase
+        page: 1
+        descriptor: Covers the task requirements with relevant, accurate content and an appropriate format, though there may be a few omissions or lapses; selected key features are covered and clearly highlighted but could be more fully illustrated or extended; presents a clear overview with data appropriately categorised and main trends or differences identified.
+        key_features: [clear overview, data appropriately categorised, main trends or differences identified, key features could be extended further]
       6:
-        descriptor: Addresses the requirements of the task with an overview and appropriately selected information; presents and adequately highlights key features, but some details may be irrelevant, inappropriate or inaccurate.
-        key_features: [overview present, key features adequately highlighted, some irrelevant or inaccurate detail]
-        source: paraphrase
+        page: 2
+        descriptor: Focuses on the task requirements in an appropriate format; selected key features are covered and adequately highlighted; a relevant overview is attempted; information is appropriately selected and supported with figures, but some detail may be irrelevant, inaccurate, missing or excessive and may need further illustration.
+        key_features: [overview attempted, key features adequately highlighted, data used for support, some irrelevant or inaccurate detail]
       5:
-        descriptor: Generally addresses the task; recounts detail mechanically with no clear overview; key features are inadequately covered and there may be a focus on details or no data to support the description.
-        key_features: [no clear overview, mechanical listing of detail, key features inadequately covered]
-        source: paraphrase
+        page: 2
+        descriptor: Generally addresses the requirements, though the format may be inappropriate in places; selected key features are not adequately covered; detail is recounted mechanically and may lack supporting data; tends to focus on details without the bigger picture; irrelevant or inaccurate material in key areas detracts from the response; limited detail when extending main points.
+        key_features: [key features not adequately covered, mechanical recounting of detail, no clear big picture or overview, irrelevant or inaccurate key information]
+      4:
+        page: 3
+        descriptor: An attempt to address the task; few key features are selected and the format may be inappropriate; the key features presented may be irrelevant, repetitive, inaccurate or inappropriate.
+        key_features: [few key features selected, irrelevant or repetitive features, inappropriate format]
+      3:
+        page: 3
+        descriptor: Does not address the task requirements, possibly from misunderstanding the data or diagram; features presented are largely irrelevant; limited information, possibly repeated.
+        key_features: [task requirements not addressed, misunderstanding of data, largely irrelevant content]
+      2:
+        page: 3
+        descriptor: Content barely relates to the task; little relevant message, or the whole response may be off-topic.
+        key_features: [barely related to task, off-topic]
+      1:
+        page: 3
+        descriptor: Content is wholly unrelated to the task; responses of 20 words or fewer receive Band 1; copied rubric is discounted.
+        key_features: [wholly unrelated, 20 words or fewer]
 
   - id: crit.writing.TR
     type: Criterion
@@ -69,182 +104,362 @@ nodes:
     short: TR
     skill: writing
     applies_to: task2
+    source_doc: "IELTS Writing Band Descriptors, Updated May 2023 (Task 2)"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-writing-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: The prompt is appropriately addressed and explored in depth; a clear, fully developed position directly answers the question(s); ideas are relevant, fully extended and well supported; lapses are extremely rare.
+        key_features: [explored in depth, fully developed position, ideas fully extended and supported]
       8:
-        descriptor: Sufficiently addresses all parts of the task; presents a well-developed response with relevant, extended and supported ideas.
-        key_features: [all parts addressed, well-developed response, ideas extended and supported]
-        source: paraphrase
+        page: 1
+        descriptor: The prompt is appropriately and sufficiently addressed; a clear, well-developed position responds to the question(s); ideas are relevant, well extended and supported, with occasional omissions or lapses.
+        key_features: [prompt sufficiently addressed, well-developed position, ideas well extended and supported]
       7:
-        descriptor: Addresses all parts of the task; presents a clear position throughout; main ideas are extended and supported but there may be a tendency to over-generalise or a lack of focus.
-        key_features: [clear position throughout, main ideas extended and supported, occasional over-generalisation]
-        source: paraphrase
+        page: 1
+        descriptor: The main parts of the prompt are appropriately addressed; a clear and developed position is presented; main ideas are extended and supported, but there may be over-generalisation or a lack of focus and precision in supporting material.
+        key_features: [main parts addressed, clear developed position, tendency to over-generalise, supporting ideas lack precision]
       6:
-        descriptor: Addresses all parts of the task, though some more fully than others; presents a relevant position although conclusions may be unclear or repetitive; main ideas are relevant but some are inadequately developed or unclear.
-        key_features: [uneven coverage of task parts, relevant but sometimes unclear position, some ideas underdeveloped]
-        source: paraphrase
+        page: 2
+        descriptor: The main parts of the prompt are addressed, some more fully than others, in an appropriate format; the position is relevant but conclusions may be unclear, unjustified or repetitive; main ideas are relevant but some are underdeveloped or unclear, and some support may be less relevant or inadequate.
+        key_features: [uneven coverage of the prompt, unclear or repetitive conclusions, some ideas underdeveloped, inadequate support]
       5:
-        descriptor: Addresses the task only partially; expresses a position but its development is not always clear and there may be no conclusions; main ideas are limited, insufficiently developed, and there may be irrelevant detail.
-        key_features: [partial response to task, unclear development of position, limited or irrelevant ideas]
-        source: paraphrase
+        page: 2
+        descriptor: The main parts of the prompt are incompletely addressed and the format may be inappropriate in places; a position is expressed but its development is not always clear; main ideas are limited, insufficiently developed or include irrelevant detail; there may be some repetition.
+        key_features: [prompt incompletely addressed, unclear development of position, limited ideas, irrelevant detail or repetition]
+      4:
+        page: 3
+        descriptor: The prompt is tackled minimally or the answer is tangential, possibly through misunderstanding; a position can be found only by careful reading; main ideas are hard to identify and may lack relevance, clarity or support; large parts may be repetitive.
+        key_features: [minimal or tangential response, position hard to find, main ideas hard to identify, much repetition]
+      3:
+        page: 3
+        descriptor: No part of the prompt is adequately addressed, or it is misunderstood; no relevant position can be identified; few ideas, which may be irrelevant or undeveloped.
+        key_features: [prompt not addressed or misunderstood, no relevant position, few ideas]
+      2:
+        page: 3
+        descriptor: Content barely relates to the prompt and no position can be identified; perhaps one or two undeveloped ideas.
+        key_features: [barely related to prompt, no position]
+      1:
+        page: 3
+        descriptor: Content is wholly unrelated to the prompt; responses of 20 words or fewer receive Band 1; copied rubric is discounted.
+        key_features: [wholly unrelated, 20 words or fewer]
 
   - id: crit.writing.CC
     type: Criterion
     name: Coherence and Cohesion
     short: CC
     skill: writing
+    source_doc: "IELTS Writing Band Descriptors, Updated May 2023 (Task 1 and Task 2)"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-writing-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: The message is followed effortlessly; cohesion very rarely attracts attention; lapses in coherence or cohesion are minimal; paragraphing is skilfully managed.
+        key_features: [effortless to follow, unobtrusive cohesion, skilful paragraphing]
       8:
-        descriptor: Sequences information and ideas logically; manages all aspects of cohesion well; uses paragraphing sufficiently and appropriately.
-        key_features: [logical sequencing, cohesion well managed, appropriate paragraphing]
-        source: paraphrase
+        page: 1
+        descriptor: The message is followed with ease; information and ideas are logically sequenced and cohesion is well managed, with occasional lapses; paragraphing is sufficient and appropriate.
+        key_features: [logical sequencing, well-managed cohesion, appropriate paragraphing]
       7:
-        descriptor: Logically organises information and ideas with clear progression throughout; uses a range of cohesive devices appropriately, with some under- or over-use; presents a clear central topic within each paragraph.
-        key_features: [clear progression, range of cohesive devices, clear central topic per paragraph]
-        source: paraphrase
+        page: 1
+        descriptor: Information and ideas are logically organised with clear progression throughout and only minor lapses; a range of cohesive devices, including reference and substitution, is used flexibly with some inaccuracy or over- or under-use; paragraphing generally supports coherence and ideas within paragraphs are logically sequenced.
+        key_features: [clear progression, flexible cohesive devices with some over or under use, reference and substitution, effective paragraphing]
+        task1_note: Task 1 omits the paragraphing sentence at this band.
       6:
-        descriptor: Arranges information and ideas coherently with clear overall progression; uses cohesive devices effectively but cohesion within or between sentences may be faulty or mechanical; referencing may not always be clear; paragraphing may not always be logical.
-        key_features: [coherent arrangement, mechanical or faulty linking, unclear referencing at times]
-        source: paraphrase
+        page: 2
+        descriptor: Information and ideas are generally arranged coherently with clear overall progression; cohesive devices are used to some good effect but cohesion within or between sentences may be faulty or mechanical through misuse, overuse or omission; reference and substitution may lack flexibility or clarity, causing repetition or error; paragraphing may not always be logical and the central topic may be unclear.
+        key_features: [clear overall progression, mechanical or faulty cohesion, overuse or misuse of linking words, inflexible referencing, paragraphing not always logical]
+        task1_note: Task 1 has no paragraphing sentence at this band.
       5:
-        descriptor: Presents information with some organisation but may lack overall progression; makes inadequate, inaccurate or over-use of cohesive devices; may be repetitive because of lack of referencing and substitution; paragraphing may be inadequate.
-        key_features: [weak overall progression, over-used or inaccurate linkers, repetition from lack of referencing]
-        source: paraphrase
+        page: 2
+        descriptor: Organisation is evident but not wholly logical and overall progression may be lacking, though there is an underlying coherence; ideas can be related but sentences are not fluently linked; cohesive devices may be limited or overused and somewhat inaccurate; inadequate reference and substitution may cause repetition; paragraphing may be inadequate or missing.
+        key_features: [organisation not wholly logical, sentences not fluently linked, limited or overused cohesive devices, repetition from poor referencing, inadequate paragraphing]
+        task1_note: Task 1 has no paragraphing sentence at this band.
+      4:
+        page: 3
+        descriptor: Information and ideas are present but not arranged coherently and there is no clear progression; relationships between ideas may be unclear or poorly marked; basic cohesive devices are used, possibly inaccurately or repetitively; substitution and referencing are inaccurate or absent; paragraphing may be missing or paragraphs lack a clear main topic.
+        key_features: [no clear progression, unclear relationships between ideas, basic repetitive linkers, no paragraphing]
+        task1_note: Task 1 has no paragraphing sentence at this band.
+      3:
+        page: 3
+        descriptor: No apparent logical organisation; ideas are discernible but hard to relate; minimal sequencers or cohesive devices, which may not show logical relationships; referencing is hard to identify; paragraphing attempts are unhelpful.
+        key_features: [no logical organisation, minimal cohesive devices, unhelpful paragraphing]
+      2:
+        page: 3
+        descriptor: Little evidence of control of organisational features.
+        key_features: [little organisational control]
+      1:
+        page: 3
+        descriptor: The writing fails to communicate any message and appears to be by a virtual non-writer; responses of 20 words or fewer receive Band 1.
+        key_features: [no message communicated, 20 words or fewer]
 
   - id: crit.writing.LR
     type: Criterion
     name: Lexical Resource
     short: LR
     skill: writing
+    source_doc: "IELTS Writing Band Descriptors, Updated May 2023 (Task 1 and Task 2)"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-writing-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: Full flexibility and precision are widely evident; a wide range of vocabulary is used accurately and appropriately with very natural, sophisticated control of lexical features; minor spelling or word-formation errors are extremely rare.
+        key_features: [full flexibility and precision, natural sophisticated vocabulary, extremely rare errors]
       8:
-        descriptor: Uses a wide range of vocabulary fluently and flexibly to convey precise meanings; skilfully uses uncommon lexical items with occasional inaccuracies in word choice and collocation; produces rare errors in spelling and word formation.
-        key_features: [wide and precise vocabulary, skilful uncommon items, rare spelling or word-formation errors]
-        source: paraphrase
+        page: 1
+        descriptor: A wide resource is used fluently and flexibly to convey precise meanings; uncommon or idiomatic items are used skilfully when appropriate, despite occasional inaccuracies in word choice and collocation; occasional spelling or word-formation errors have minimal impact.
+        key_features: [wide precise vocabulary, skilful uncommon or idiomatic items, occasional collocation errors]
       7:
-        descriptor: Uses a sufficient range of vocabulary to allow some flexibility and precision; uses less common items with some awareness of style and collocation; may produce occasional errors in word choice, spelling and word formation.
-        key_features: [flexible and fairly precise vocabulary, less common items with collocation awareness, occasional errors]
-        source: paraphrase
+        page: 1
+        descriptor: The resource allows some flexibility and precision; there is some ability to use less common or idiomatic items; awareness of style and collocation is evident though inappropriacies occur; only a few spelling or word-formation errors, which do not detract from clarity.
+        key_features: [some flexibility and precision, less common items, style and collocation awareness, few spelling errors]
       6:
-        descriptor: Uses an adequate range of vocabulary for the task; attempts less common vocabulary with some inaccuracy; makes some errors in spelling and word formation that do not impede communication.
-        key_features: [adequate range, inaccurate attempts at less common words, errors that do not impede meaning]
-        source: paraphrase
+        page: 2
+        descriptor: The resource is generally adequate and appropriate; meaning is generally clear despite a rather restricted range or imprecise word choice; risk-takers show wider range but more inaccuracy or inappropriacy; some spelling or word-formation errors that do not impede communication.
+        key_features: [adequate range, imprecise word choice, risk-taking with inaccuracy, some spelling errors]
       5:
-        descriptor: Uses a limited range of vocabulary that is minimally adequate for the task; may make noticeable errors in spelling and word formation that cause some difficulty for the reader.
-        key_features: [limited range, noticeable spelling and word-formation errors, some strain on reader]
-        source: paraphrase
+        page: 2
+        descriptor: The resource is limited but minimally adequate; simple vocabulary may be accurate but the range allows little variation; frequent lapses in appropriacy of word choice and frequent simplification or repetition; spelling or word-formation errors may be noticeable and cause some difficulty for the reader.
+        key_features: [limited range, little variation in expression, frequent repetition, noticeable spelling errors]
+      4:
+        page: 3
+        descriptor: The resource is limited and inadequate for, or unrelated to, the task; vocabulary is basic and may be repetitive; memorised phrases, formulaic language or language copied from the input may be used inappropriately; word choice, word-formation or spelling errors may impede meaning.
+        key_features: [basic repetitive vocabulary, memorised or copied phrases, errors impede meaning]
+      3:
+        page: 3
+        descriptor: The resource is inadequate, possibly because the response is far too short; possible over-reliance on input material or memorised language; control of word choice and spelling is very limited and errors predominate, severely impeding meaning.
+        key_features: [inadequate resource, over-reliance on input or memorised language, errors predominate]
+      2:
+        page: 3
+        descriptor: Extremely limited resource with few recognisable strings apart from memorised phrases; no apparent control of word formation or spelling.
+        key_features: [few recognisable strings, no spelling control]
+      1:
+        page: 3
+        descriptor: No resource is apparent except a few isolated words; responses of 20 words or fewer receive Band 1.
+        key_features: [isolated words only, 20 words or fewer]
 
   - id: crit.writing.GRA
     type: Criterion
     name: Grammatical Range and Accuracy
     short: GRA
     skill: writing
+    source_doc: "IELTS Writing Band Descriptors, Updated May 2023 (Task 1 and Task 2)"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-writing-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: A wide range of structures is used with full flexibility and control; grammar and punctuation are appropriate throughout; minor errors are extremely rare.
+        key_features: [full flexibility and control, appropriate punctuation throughout, extremely rare errors]
       8:
-        descriptor: Uses a wide range of structures; the majority of sentences are error-free; makes only very occasional errors or inappropriacies.
-        key_features: [wide range of structures, majority error-free, very occasional errors]
-        source: paraphrase
+        page: 1
+        descriptor: A wide range of structures is used flexibly and accurately; most sentences are error-free and punctuation is well managed; occasional non-systematic errors and inappropriacies have minimal impact.
+        key_features: [wide range of structures, majority error-free, well-managed punctuation, occasional non-systematic errors]
       7:
-        descriptor: Uses a variety of complex structures; produces frequent error-free sentences; has good control of grammar and punctuation but may make a few errors.
-        key_features: [variety of complex structures, frequent error-free sentences, a few errors]
-        source: paraphrase
+        page: 1
+        descriptor: A variety of complex structures is used with some flexibility and accuracy; grammar and punctuation are generally well controlled and error-free sentences are frequent; a few grammatical errors may persist without impeding communication.
+        key_features: [variety of complex structures, frequent error-free sentences, a few persistent errors]
       6:
-        descriptor: Uses a mix of simple and complex sentence forms; makes some errors in grammar and punctuation but they rarely reduce communication.
-        key_features: [mix of simple and complex forms, some errors, communication rarely reduced]
-        source: paraphrase
+        page: 2
+        descriptor: A mix of simple and complex sentence forms is used with limited flexibility; complex structures are less accurate than simple ones; grammar and punctuation errors occur but rarely impede communication.
+        key_features: [mix of simple and complex forms, limited flexibility, complex structures less accurate]
       5:
-        descriptor: Uses only a limited range of structures; attempts complex sentences but these tend to be less accurate than simple sentences; may make frequent grammatical errors and punctuation may be faulty, causing some difficulty for the reader.
-        key_features: [limited range, complex sentences inaccurate, frequent errors]
-        source: paraphrase
+        page: 2
+        descriptor: The range of structures is limited and rather repetitive; complex sentences are attempted but tend to be faulty, with greatest accuracy in simple sentences; grammatical errors may be frequent and cause some difficulty; punctuation may be faulty.
+        key_features: [limited repetitive structures, faulty complex sentences, frequent errors, faulty punctuation]
+      4:
+        page: 3
+        descriptor: A very limited range of structures; subordinate clauses are rare and simple sentences predominate; some structures are accurate but errors are frequent and may impede meaning; punctuation is often faulty or inadequate.
+        key_features: [very limited range, rare subordinate clauses, frequent errors impede meaning]
+      3:
+        page: 3
+        descriptor: Sentence forms are attempted but grammar and punctuation errors predominate except in memorised or copied phrases, preventing most meaning from coming through; length may be too short to show control.
+        key_features: [errors predominate, meaning mostly lost, insufficient length]
+      2:
+        page: 3
+        descriptor: Little or no evidence of sentence forms except in memorised phrases.
+        key_features: [no sentence forms]
+      1:
+        page: 3
+        descriptor: No rateable language is evident; responses of 20 words or fewer receive Band 1.
+        key_features: [no rateable language, 20 words or fewer]
 
-  # ---------------- speaking criteria ----------------
+  # ================= SPEAKING =================
   - id: crit.speaking.FC
     type: Criterion
     name: Fluency and Coherence
     short: FC
     skill: speaking
+    source_doc: "IELTS Speaking Band Descriptors"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-speaking-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: Fluent with only very occasional repetition or self-correction; hesitation is used only to prepare content, not to find words or grammar; speech is situationally appropriate with fully acceptable cohesive features; topic development is fully coherent and appropriately extended.
+        key_features: [hesitation only content-related, fully coherent topic development, appropriate cohesion]
       8:
-        descriptor: Speaks fluently with only occasional repetition or self-correction; hesitation is usually content-related and only rarely to search for language; develops topics coherently and appropriately.
-        key_features: [fluent, hesitation mostly content-related, coherent topic development]
-        source: paraphrase
+        page: 1
+        descriptor: Fluent with only very occasional repetition or self-correction; hesitation may occasionally be used to find words or grammar but is mostly content-related; topic development is coherent, appropriate and relevant.
+        key_features: [fluent, mostly content-related hesitation, coherent relevant development]
       7:
-        descriptor: Speaks at length without noticeable effort or loss of coherence; may show language-related hesitation at times, or some repetition and self-correction; uses a range of connectives and discourse markers with some flexibility.
-        key_features: [speaks at length easily, some language-related hesitation, flexible discourse markers]
-        source: paraphrase
+        page: 1
+        descriptor: Keeps going and readily produces long turns without noticeable effort; some hesitation, repetition or self-correction, often mid-sentence and showing difficulty accessing language, but coherence is not affected; flexible use of spoken discourse markers, connectives and cohesive features.
+        key_features: [long turns without effort, some mid-sentence hesitation, flexible discourse markers]
       6:
-        descriptor: Is willing to speak at length, though may lose coherence at times due to occasional repetition, self-correction or hesitation; uses a range of connectives and discourse markers but not always appropriately.
-        key_features: [willing to speak at length, occasional loss of coherence, connectives not always appropriate]
-        source: paraphrase
+        page: 2
+        descriptor: Keeps going and is willing to produce long turns; coherence may be lost at times through hesitation, repetition or self-correction; uses a range of discourse markers, connectives and cohesive features, though not always appropriately.
+        key_features: [willing to produce long turns, occasional loss of coherence, discourse markers not always appropriate]
       5:
-        descriptor: Usually maintains flow of speech but uses repetition, self-correction and/or slow speech to keep going; may over-use certain connectives; simple speech is fluent but more complex communication causes fluency problems.
-        key_features: [relies on repetition or slow speech, over-used connectives, fluency drops on complex ideas]
-        source: paraphrase
+        page: 2
+        descriptor: Usually keeps going but relies on repetition, self-correction or slow speech; hesitation often comes from mid-sentence searches for fairly basic vocabulary and grammar; overuses certain discourse markers and connectives; complex speech usually causes disfluency while simpler language can be fluent.
+        key_features: [relies on repetition or slow speech, searches for basic words, overused connectives, disfluent on complex ideas]
+      4:
+        page: 2
+        descriptor: Cannot keep going without noticeable pauses; speech may be slow with frequent repetition and self-correction; links simple sentences but often with repetitive connectives; some breakdowns in coherence.
+        key_features: [noticeable pauses, frequent repetition, repetitive connectives, coherence breakdowns]
+      3:
+        page: 3
+        descriptor: Frequent, sometimes long pauses while searching for words; limited ability to link simple sentences or go beyond simple answers; often unable to convey a basic message.
+        key_features: [frequent long pauses, cannot go beyond simple answers]
+      2:
+        page: 3
+        descriptor: Lengthy pauses before nearly every word; isolated words may be recognisable but speech has virtually no communicative value.
+        key_features: [pauses before nearly every word]
+      1:
+        page: 3
+        descriptor: Essentially no fluency; speech is totally incoherent.
+        key_features: [totally incoherent]
 
   - id: crit.speaking.LR
     type: Criterion
     name: Lexical Resource
     short: LR
     skill: speaking
+    source_doc: "IELTS Speaking Band Descriptors"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-speaking-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: Total flexibility and precise use in all contexts; sustained use of accurate and idiomatic language.
+        key_features: [total flexibility, sustained idiomatic accuracy]
       8:
-        descriptor: Uses a wide vocabulary resource readily and flexibly to convey precise meaning; uses less common and idiomatic vocabulary skilfully, with occasional inaccuracies; paraphrases effectively as required.
-        key_features: [wide and precise vocabulary, skilful idiomatic language, effective paraphrase]
-        source: paraphrase
+        page: 1
+        descriptor: A wide resource is used readily and flexibly on all topics to convey precise meaning; less common and idiomatic items are used skilfully despite occasional inaccuracies in word choice and collocation; paraphrase is effective when needed.
+        key_features: [wide flexible vocabulary, skilful idiomatic items, effective paraphrase]
       7:
-        descriptor: Uses vocabulary resource flexibly to discuss a variety of topics; uses some less common and idiomatic vocabulary and shows some awareness of style and collocation, with some inappropriate choices; uses paraphrase effectively.
-        key_features: [flexible across topics, some idiomatic language, effective paraphrase]
-        source: paraphrase
+        page: 1
+        descriptor: The resource is used flexibly across a variety of topics; some ability to use less common and idiomatic items with awareness of style and collocation, though inappropriacies occur; paraphrase is effective when needed.
+        key_features: [flexible across topics, some idiomatic items, effective paraphrase]
       6:
-        descriptor: Has a wide enough vocabulary to discuss topics at length and make meaning clear in spite of inappropriacies; generally paraphrases successfully.
-        key_features: [enough vocabulary to speak at length, some inappropriacies, generally successful paraphrase]
-        source: paraphrase
+        page: 2
+        descriptor: The resource is sufficient to discuss topics at length; word use may be inappropriate but meaning is clear; generally able to paraphrase successfully.
+        key_features: [enough vocabulary to speak at length, some inappropriate words, generally successful paraphrase]
       5:
-        descriptor: Manages to talk about familiar and unfamiliar topics but uses vocabulary with limited flexibility; attempts to use paraphrase but with mixed success.
-        key_features: [limited flexibility, mixed success with paraphrase]
-        source: paraphrase
+        page: 2
+        descriptor: The resource is sufficient for familiar and unfamiliar topics but with limited flexibility; attempts paraphrase without consistent success.
+        key_features: [limited flexibility, paraphrase not always successful]
+      4:
+        page: 2
+        descriptor: Sufficient for familiar topics but only basic meaning on unfamiliar ones; frequent inappropriacies and errors in word choice; rarely attempts paraphrase.
+        key_features: [basic meaning on unfamiliar topics, frequent word-choice errors, rarely paraphrases]
+      3:
+        page: 3
+        descriptor: Limited to simple vocabulary used mainly for personal information; inadequate for unfamiliar topics.
+        key_features: [simple personal vocabulary only]
+      2:
+        page: 3
+        descriptor: Very limited resource; utterances are isolated words or memorised phrases; little communication without mime or gesture.
+        key_features: [isolated words or memorised phrases]
+      1:
+        page: 3
+        descriptor: No resource beyond a few isolated words; no communication possible.
+        key_features: [a few isolated words]
 
   - id: crit.speaking.GRA
     type: Criterion
     name: Grammatical Range and Accuracy
     short: GRA
     skill: speaking
+    source_doc: "IELTS Speaking Band Descriptors"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-speaking-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: Structures are precise and accurate at all times, apart from slips typical of native-speaker speech.
+        key_features: [precise and accurate at all times]
       8:
-        descriptor: Uses a wide range of structures flexibly; produces a majority of error-free sentences with only very occasional inappropriacies or basic, non-systematic errors.
-        key_features: [wide flexible range, majority error-free, non-systematic errors only]
-        source: paraphrase
+        page: 1
+        descriptor: A wide range of structures is used flexibly; most sentences are error-free; occasional inappropriacies and non-systematic errors, and a few basic errors may persist.
+        key_features: [wide flexible range, majority error-free, a few basic errors]
       7:
-        descriptor: Uses a range of complex structures with some flexibility; frequently produces error-free sentences, though some grammatical mistakes persist.
-        key_features: [range of complex structures, frequent error-free sentences, persistent minor mistakes]
-        source: paraphrase
+        page: 1
+        descriptor: A range of structures is used flexibly and error-free sentences are frequent; simple and complex sentences are used effectively despite some errors; a few basic errors persist.
+        key_features: [range of structures, frequent error-free sentences, simple and complex used effectively]
       6:
-        descriptor: Uses a mix of simple and complex structures, but with limited flexibility; may make frequent mistakes with complex structures, though these rarely cause comprehension problems.
-        key_features: [mix of simple and complex, limited flexibility, errors in complex structures]
-        source: paraphrase
+        page: 2
+        descriptor: A mix of short and complex sentence forms and a variety of structures with limited flexibility; errors are frequent in complex structures but rarely impede communication.
+        key_features: [mix of short and complex forms, limited flexibility, errors in complex structures]
       5:
-        descriptor: Produces basic sentence forms with reasonable accuracy; uses a limited range of more complex structures, but these usually contain errors and may cause some comprehension problems.
-        key_features: [basic forms accurate, complex structures usually contain errors]
-        source: paraphrase
+        page: 2
+        descriptor: Basic sentence forms are fairly well controlled; complex structures are attempted but limited in range, nearly always contain errors and may need reformulation.
+        key_features: [basic forms controlled, complex structures nearly always wrong, reformulation needed]
+      4:
+        page: 2
+        descriptor: Produces basic sentence forms and some error-free short utterances; subordinate clauses are rare; turns are short, structures repetitive and errors frequent.
+        key_features: [basic forms only, rare subordinate clauses, short repetitive turns, frequent errors]
+      3:
+        page: 3
+        descriptor: Basic sentence forms are attempted but errors are numerous except in apparently memorised utterances.
+        key_features: [numerous errors except memorised phrases]
+      2:
+        page: 3
+        descriptor: No evidence of basic sentence forms.
+        key_features: [no basic sentence forms]
+      1:
+        page: 3
+        descriptor: No rateable language unless memorised.
+        key_features: [no rateable language]
 
   - id: crit.speaking.P
     type: Criterion
     name: Pronunciation
     short: P
     skill: speaking
+    source_doc: "IELTS Speaking Band Descriptors"
+    source_url: https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-speaking-band-descriptors.pdf
     descriptors:
+      9:
+        page: 1
+        descriptor: Uses the full range of phonological features to convey precise or subtle meaning; flexible connected speech is sustained throughout; effortlessly understood; accent has no effect on intelligibility.
+        key_features: [full range of phonological features, sustained connected speech, effortlessly understood]
       8:
-        descriptor: Uses a wide range of pronunciation features; sustains flexible use of features with only occasional lapses; is easy to understand throughout; L1 accent has minimal effect on intelligibility.
-        key_features: [wide range of features, flexible intonation and stress, easy to understand throughout]
-        source: paraphrase
+        page: 1
+        descriptor: Uses a wide range of phonological features to convey precise or subtle meaning; sustains appropriate rhythm with flexible stress and intonation over long utterances despite occasional lapses; easily understood; accent has minimal effect on intelligibility.
+        key_features: [wide range of features, appropriate rhythm, flexible stress and intonation, easily understood]
       7:
+        page: 1
         descriptor: Shows all the positive features of Band 6 and some, but not all, of the positive features of Band 8.
-        key_features: [between band 6 and band 8 features]
-        source: paraphrase
+        key_features: [all band 6 features plus some band 8 features]
       6:
-        descriptor: Uses a range of pronunciation features with mixed control; shows some effective use of features but this is not sustained; can generally be understood throughout, though mispronunciation of individual words or sounds reduces clarity at times.
-        key_features: [range of features with mixed control, generally understood, some words or sounds unclear]
-        source: paraphrase
+        page: 2
+        descriptor: Uses a range of phonological features with variable control; chunking is generally appropriate but rhythm may suffer from lack of stress-timing or rapid speech; some effective intonation and stress, not sustained; individual words or sounds may be mispronounced, causing only occasional unclarity; generally understood without much effort.
+        key_features: [variable control, rhythm affected by stress-timing or speed, unsustained intonation, occasional mispronounced words]
       5:
+        page: 2
         descriptor: Shows all the positive features of Band 4 and some, but not all, of the positive features of Band 6.
-        key_features: [between band 4 and band 6 features]
-        source: paraphrase
+        key_features: [all band 4 features plus some band 6 features]
+      4:
+        page: 2
+        descriptor: Some acceptable phonological features but a limited range; some acceptable chunking with frequent lapses in rhythm; attempts intonation and stress with limited control; words or sounds are frequently mispronounced, causing unclarity; understanding requires some effort and some stretches may be unintelligible.
+        key_features: [limited range, frequent rhythm lapses, frequent mispronunciation, effort to understand]
+      3:
+        page: 3
+        descriptor: Shows some features of Band 2 and some, but not all, of the positive features of Band 4.
+        key_features: [between band 2 and band 4]
+      2:
+        page: 3
+        descriptor: Few acceptable phonological features, possibly because the sample is too short; delivery problems impair connected speech; words and sounds are mainly mispronounced and little meaning comes through; often unintelligible.
+        key_features: [mainly mispronounced, often unintelligible]
+      1:
+        page: 3
+        descriptor: Occasional recognisable words or sounds but no overall meaning; unintelligible.
+        key_features: [unintelligible]

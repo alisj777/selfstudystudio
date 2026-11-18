@@ -7,7 +7,7 @@ def test_seed_loads_without_warnings(kg):
     assert validate(kg) == []
     stats = kg.stats()
     assert stats["Criterion"] == 9
-    assert stats["BandDescriptor"] == 36  # 9 criteria x bands 5-8
+    assert stats["BandDescriptor"] == 81  # 9 criteria x bands 1-9
     assert stats["Topic"] >= 30
     assert stats["GrammarPoint"] >= 20
 
@@ -17,6 +17,12 @@ def test_writing_and_speaking_criteria(kg):
     speaking = {c.attrs["short"] for c in kg.criteria_for("skill.speaking")}
     assert writing == {"TA", "TR", "CC", "LR", "GRA"}
     assert speaking == {"FC", "LR", "GRA", "P"}
+
+
+def test_every_descriptor_cites_official_source(kg):
+    for d in kg.nodes(NodeType.BAND_DESCRIPTOR):
+        assert d.attrs.get("source_url", "").startswith("https://ielts.org/"), d.id
+        assert d.attrs.get("page") and d.attrs.get("descriptor") and d.attrs.get("key_features"), d.id
 
 
 def test_descriptors_by_band(kg):

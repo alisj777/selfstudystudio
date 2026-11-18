@@ -180,7 +180,8 @@ def rubric_docs(kg: KnowledgeGraph, samples: list[ScoredSample]) -> list[IndexDo
                     "criterion_short": crit.attrs.get("short"),
                     "band": desc.attrs["band"],
                     "key_features": features,
-                    "source": desc.attrs.get("source"),
+                    "source_doc": desc.attrs.get("source_doc"),
+                    "page": desc.attrs.get("page"),
                 },
             )
         )

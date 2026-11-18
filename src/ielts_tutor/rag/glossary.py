@@ -21,6 +21,15 @@ _CJK = re.compile(r"[一-鿿]")
 class Expansion:
     query: str  # text to send to BM25
     matched: list[str] = field(default_factory=list)  # glossary group names that fired
+    english: str = ""  # the English glossary terms that were added
+
+    @property
+    def dense_query(self) -> str | None:
+        """For a Chinese query, the English terms are a better input for an English
+        embedding model than the Chinese text; otherwise keep the original query."""
+        if self.english and _CJK.search(self.query):
+            return self.english
+        return None
 
 
 class Glossary:
@@ -75,4 +84,5 @@ class Glossary:
                     if stems and not set(stems) <= seen:
                         seen.update(stems)
                         extra.append(word)
-        return Expansion(query=f"{query} {' '.join(extra)}", matched=matched)
+        english = " ".join(extra)
+        return Expansion(query=f"{query} {english}", matched=matched, english=english)
