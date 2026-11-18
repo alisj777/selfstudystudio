@@ -7,14 +7,25 @@ import zlib
 from typing import Protocol
 
 import numpy as np
+import snowballstemmer
 
 from ..config import Settings, get_settings
 
-_WORD = re.compile(r"[a-z0-9]+(?:'[a-z]+)?")
+_WORD = re.compile(r"[a-z0-9]+")
+_STEMMER = snowballstemmer.stemmer("english")
+
+# Instruction prepended to short search queries (not to documents), per model card.
+QUERY_PREFIXES = {
+    "BAAI/bge-small-en-v1.5": "Represent this sentence for searching relevant passages: ",
+    "BAAI/bge-base-en-v1.5": "Represent this sentence for searching relevant passages: ",
+    "BAAI/bge-large-en-v1.5": "Represent this sentence for searching relevant passages: ",
+    "BAAI/bge-m3": "",
+}
 
 
 def tokenize(text: str) -> list[str]:
-    return _WORD.findall(text.lower())
+    """Lower-case, split hyphenated words, and stem (overused / over-use -> over, use)."""
+    return _STEMMER.stemWords(_WORD.findall(text.lower().replace("-", " ")))
 
 
 class Embedder(Protocol):
@@ -22,7 +33,11 @@ class Embedder(Protocol):
     dim: int
 
     def embed(self, texts: list[str]) -> np.ndarray:
-        """Return an (n, dim) float32 array of L2-normalised vectors."""
+        """Embed documents: an (n, dim) float32 array of L2-normalised vectors."""
+        ...
+
+    def embed_query(self, texts: list[str]) -> np.ndarray:
+        """Embed short search queries (may add a model-specific instruction)."""
         ...
 
 
@@ -61,9 +76,12 @@ class HashingEmbedder:
                 mat[row, h % self.dim] += weight if (h >> 31) & 1 else -weight
         return _normalise(mat)
 
+    def embed_query(self, texts: list[str]) -> np.ndarray:
+        return self.embed(texts)
+
 
 class SentenceTransformerEmbedder:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, query_prefix: str | None = None):
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:  # pragma: no cover - optional extra
@@ -71,10 +89,14 @@ class SentenceTransformerEmbedder:
         self._model = SentenceTransformer(model_name)
         self.dim = int(self._model.get_sentence_embedding_dimension())
         self.name = f"st:{model_name}"
+        self.query_prefix = QUERY_PREFIXES.get(model_name, "") if query_prefix is None else query_prefix
 
     def embed(self, texts: list[str]) -> np.ndarray:
         vecs = self._model.encode(texts, normalize_embeddings=True, convert_to_numpy=True)
         return np.asarray(vecs, dtype=np.float32)
+
+    def embed_query(self, texts: list[str]) -> np.ndarray:
+        return self.embed([self.query_prefix + t for t in texts])
 
 
 def get_embedder(settings: Settings | None = None) -> Embedder:

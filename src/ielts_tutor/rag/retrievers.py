@@ -7,6 +7,7 @@ from collections.abc import Sequence
 import numpy as np
 
 from ..kg import KnowledgeGraph
+from .glossary import Glossary
 from .index import Hit, HybridIndex
 from .schema import Evidence, SourceName
 
@@ -33,13 +34,22 @@ def rrf_fuse(rankings: Sequence[Sequence[Evidence]], k: int | None = None) -> li
     return fused[:k] if k else fused
 
 
-class CorpusRetriever:
+class _Retriever:
+    source: SourceName
+
+    def __init__(self, index: HybridIndex, glossary: Glossary | None = None):
+        self.index = index
+        self.glossary = glossary
+
+    def _search(self, query: str, k: int, filters: dict | None) -> list[Hit]:
+        bm25_query = self.glossary.expand(query).query if self.glossary else None
+        return self.index.search(query, k, filters, bm25_query=bm25_query)
+
+
+class CorpusRetriever(_Retriever):
     """Exam questions, question-bank items, model answers and passages."""
 
     source: SourceName = "corpus"
-
-    def __init__(self, index: HybridIndex):
-        self.index = index
 
     def retrieve(
         self,
@@ -67,7 +77,7 @@ class CorpusRetriever:
         }
         excluded = set(exclude_ids)
         pool = k * 4 if mmr_lambda is not None else k + len(excluded)
-        hits = [h for h in self.index.search(query, pool, filters) if h.doc.id not in excluded]
+        hits = [h for h in self._search(query, pool, filters) if h.doc.id not in excluded]
         if mmr_lambda is not None and len(hits) > k:
             hits = self._mmr(hits, k, mmr_lambda)
         return [_evidence(self.source, h) for h in hits[:k]]
@@ -91,19 +101,16 @@ class CorpusRetriever:
     def max_similarity(self, text: str, *, skill: str | None = None) -> tuple[float, Evidence | None]:
         """Highest cosine similarity between `text` and existing corpus items; used to
         reject generated questions that copy real ones too closely."""
-        hits = self.index.search(text, 1, {"skill": skill} if skill else None)
+        hits = self.index.search(text, 1, {"skill": skill} if skill else None, symmetric=True)
         if not hits:
             return 0.0, None
         return hits[0].dense, _evidence(self.source, hits[0])
 
 
-class RubricRetriever:
+class RubricRetriever(_Retriever):
     """Band descriptors plus scored samples for calibration."""
 
     source: SourceName = "rubric"
-
-    def __init__(self, index: HybridIndex):
-        self.index = index
 
     def descriptors(self, criterion_id: str, band: float, window: int = 1) -> list[Evidence]:
         """Descriptors for `criterion_id` near `band`: 6 with window 1 -> bands 5-7;
@@ -123,7 +130,7 @@ class RubricRetriever:
 
     def search_descriptors(self, query: str, k: int = 5, *, skill: str | None = None) -> list[Evidence]:
         filters = {"kind": "descriptor", **({"skill": skill} if skill else {})}
-        return [_evidence(self.source, h) for h in self.index.search(query, k, filters)]
+        return [_evidence(self.source, h) for h in self._search(query, k, filters)]
 
     def similar_samples(
         self,
@@ -141,7 +148,8 @@ class RubricRetriever:
             filters["task"] = task
         if around_band is not None:
             filters["overall"] = {"gte": around_band - band_window, "lte": around_band + band_window}
-        return [_evidence(self.source, h) for h in self.index.search(response_text, k, filters)]
+        hits = self.index.search(response_text, k, filters, symmetric=True)
+        return [_evidence(self.source, h) for h in hits]
 
     def knn_band(self, samples: list[Evidence], criterion: str = "overall") -> float | None:
         """Similarity-weighted mean band of retrieved samples (the k-NN prior in the fusion formula)."""
@@ -158,19 +166,19 @@ class RubricRetriever:
         return float(sum(w * b for w, b in pairs) / total)
 
 
-class TopicRetriever:
+class TopicRetriever(_Retriever):
     """Topic entries with one-hop knowledge-graph expansion (GraphRAG)."""
 
     source: SourceName = "topic"
 
-    def __init__(self, index: HybridIndex, kg: KnowledgeGraph | None = None):
-        self.index = index
+    def __init__(self, index: HybridIndex, kg: KnowledgeGraph | None = None, glossary: Glossary | None = None):
+        super().__init__(index, glossary)
         self.kg = kg
 
     def retrieve(
         self, query: str, k: int = 3, *, skill: str | None = None, expand: bool = True
     ) -> list[Evidence]:
-        hits = self.index.search(query, k, {"skills": skill} if skill else None)
+        hits = self._search(query, k, {"skills": skill} if skill else None)
         results = [_evidence(self.source, h) for h in hits]
         if not (expand and self.kg):
             return results

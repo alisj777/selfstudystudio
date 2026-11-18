@@ -1,0 +1,70 @@
+# IELTS terminology glossary for query expansion (keyword side of hybrid search).
+#
+# Each group lists terms that mean the same thing to a learner. When a query
+# contains any term of a group, the other terms are added to the keyword query.
+# Keep groups small and specific: add an entry when a real query missed, and
+# avoid very common words that would match everything.
+# Chinese terms let Chinese questions reach English material.
+
+groups:
+  # ---------- assessment language ----------
+  - name: cohesive_devices
+    terms: [cohesive devices, linking words, linkers, connectives, connectors, transition words, discourse markers, 连接词, 衔接词, 过渡词]
+  - name: referencing
+    terms: [referencing, substitution, reference words, pronouns, 指代, 替代]
+  - name: organisation
+    terms: [coherence, organisation, logical progression, paragraphing, 结构, 段落, 逻辑]
+  - name: overview
+    terms: [overview, main trends, overall trend, general summary, 概述, 总体趋势]
+  - name: task_response
+    terms: [task response, address all parts, answer the question, position, 切题, 观点不清, 审题]
+  - name: vocabulary
+    terms: [lexical resource, vocabulary, word choice, 词汇, 用词]
+  - name: collocation
+    terms: [collocation, word combinations, 搭配]
+  - name: spelling
+    terms: [spelling, word formation, 拼写, 构词]
+  - name: grammar_range
+    terms: [grammatical range, complex structures, complex sentences, sentence variety, 复杂句, 句式]
+  - name: grammar_accuracy
+    terms: [grammatical accuracy, grammar errors, grammatical errors, error-free sentences, 语法错误]
+  - name: fluency
+    terms: [fluency, hesitation, pauses, self-correction, speak at length, 流利, 停顿, 卡壳]
+  - name: pronunciation
+    terms: [pronunciation, accent, intonation, word stress, rhythm, intelligibility, 发音, 语调, 口音, 重音]
+  - name: paraphrase
+    terms: [paraphrase, rephrase, reword, say it another way, 改写, 同义替换]
+
+  # ---------- topics ----------
+  - name: online_learning
+    terms: [online learning, e-learning, distance learning, online courses, remote study, 网课, 在线学习, 远程教育]
+  - name: climate
+    terms: [climate change, global warming, greenhouse gases, carbon emissions, 气候变化, 全球变暖, 碳排放]
+  - name: pollution
+    terms: [pollution, environment, environmental damage, 环境, 污染]
+  - name: ai
+    terms: [artificial intelligence, AI, robots, automation, 人工智能, 机器人]
+  - name: ageing
+    terms: [ageing population, elderly, older people, old people, senior citizens, 老龄化, 老年人]
+  - name: urbanisation
+    terms: [urbanisation, rural-urban migration, moving to cities, 城市化]
+  - name: waste
+    terms: [waste, rubbish, garbage, litter, 垃圾]
+  - name: remote_work
+    terms: [remote work, working from home, telecommuting, 居家办公, 远程办公]
+  - name: leisure
+    terms: [hobbies, pastime, free time, spare time, leisure, 爱好, 业余时间]
+  - name: obesity
+    terms: [obesity, overweight, junk food, fast food, 肥胖, 垃圾食品]
+  - name: tourism
+    terms: [tourism, tourists, travellers, visitors, 旅游, 游客]
+  - name: crime
+    terms: [crime, criminals, offenders, prison, jail, 犯罪, 监狱]
+  - name: children
+    terms: [children, kids, 孩子, 儿童]
+  - name: traffic
+    terms: [traffic congestion, traffic jams, 交通拥堵, 堵车]
+  - name: arts
+    terms: [the arts, art galleries, museums, 艺术, 博物馆]
+  - name: internet
+    terms: [internet, the web, online, 互联网, 网络]

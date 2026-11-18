@@ -9,8 +9,9 @@ import typer
 
 from .config import get_settings
 from .kg import KnowledgeGraph, load_seed, validate
-from .rag import build_indexes, get_embedder, load_multirag, save_indexes
+from .rag import build_indexes, get_embedder, load_multirag, multirag_from, save_indexes
 from .rag.build import import_scored_csv, load_corpus, load_samples, write_jsonl
+from .rag.glossary import Glossary
 
 app = typer.Typer(help="IELTS tutor data tools", no_args_is_help=True)
 
@@ -18,6 +19,12 @@ app = typer.Typer(help="IELTS tutor data tools", no_args_is_help=True)
 def _kg_path() -> Path:
     s = get_settings()
     return s.index_dir.parent / f"kg_{s.exam}.json"
+
+
+def _glossary() -> Glossary | None:
+    s = get_settings()
+    path = s.exam_dir / s.glossary_file
+    return Glossary.load(path) if s.use_glossary and path.exists() else None
 
 
 @app.command()
@@ -47,7 +54,12 @@ def search(
     """Search one RAG source, or all three fused with RRF."""
     s = get_settings()
     kg = KnowledgeGraph.from_json(_kg_path())
-    rag = load_multirag(s.index_dir, get_embedder(s), kg)
+    glossary = _glossary()
+    if glossary:
+        matched = glossary.match(query)
+        if matched:
+            typer.echo(f"(glossary: {', '.join(matched)})")
+    rag = load_multirag(s.index_dir, get_embedder(s), kg, glossary)
     if source == "corpus":
         results = rag.corpus.retrieve(query, k, skill=skill)
     elif source == "rubric":
@@ -59,6 +71,44 @@ def search(
     for ev in results:
         typer.echo(f"[{ev.source}] {ev.id}  score={ev.score:.4f}")
         typer.echo(f"    {ev.text[:160]}")
+
+
+@app.command("eval")
+def evaluate(
+    queries: Path = typer.Option(None, help="Query set YAML (default: data/<exam>/eval/retrieval_queries.yaml)"),
+    show_misses: bool = typer.Option(False, help="Print queries whose answer was not ranked first"),
+) -> None:
+    """Compare retrieval setups: hashing vs semantic embedder, each with and without the glossary."""
+    from .rag.embed import HashingEmbedder, SentenceTransformerEmbedder
+    from .rag.evaluate import load_queries, run, summarise
+
+    s = get_settings()
+    qs = load_queries(queries or s.exam_dir / "eval" / "retrieval_queries.yaml")
+    kg = load_seed(s.exam_dir / "kg", exam=s.exam)
+    chunks, samples = load_corpus(s.exam_dir / "corpus"), load_samples(s.exam_dir / "scoring")
+    glossary = Glossary.load(s.exam_dir / s.glossary_file)
+
+    embedders = [HashingEmbedder(), SentenceTransformerEmbedder(s.embedding_model)]
+    rows = []
+    for emb in embedders:
+        indexes = build_indexes(kg, chunks, samples, emb)
+        for use_g in (False, True):
+            results = run(multirag_from(indexes, kg, glossary if use_g else None), qs)
+            label = f"{emb.name}{' + glossary' if use_g else ''}"
+            rows.append((label, summarise(results)))
+            if show_misses:
+                for r in results:
+                    if r.rank != 1:
+                        typer.echo(f"  [{label}] {r.query.id} rank={r.rank} q={r.query.query!r} top={r.top}")
+
+    groups = list(rows[0][1].keys())
+    for group in groups:
+        n = rows[0][1][group]["n"]
+        typer.echo(f"\n{group} (n={n})")
+        typer.echo(f"  {'setup':45} {'hit@1':>6} {'hit@3':>6} {'MRR':>6}")
+        for label, summary in rows:
+            m = summary[group]
+            typer.echo(f"  {label:45} {m['hit@1']:6.2f} {m['hit@3']:6.2f} {m['mrr']:6.2f}")
 
 
 @app.command("kg-stats")

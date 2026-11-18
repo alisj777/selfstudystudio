@@ -25,10 +25,14 @@ class Settings(BaseSettings):
     llm_effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     llm_max_tokens: int = 16000
 
-    # Embeddings: "hashing" needs no download (good for tests and demos);
-    # "sentence-transformers" loads embedding_model (e.g. BAAI/bge-m3).
-    embedder: Literal["hashing", "sentence-transformers"] = "hashing"
-    embedding_model: str = "BAAI/bge-m3"
+    # Embeddings: "sentence-transformers" loads embedding_model (semantic search);
+    # "hashing" needs no download and only matches surface words (tests, offline demos).
+    embedder: Literal["hashing", "sentence-transformers"] = "sentence-transformers"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+
+    # Query expansion glossary (relative to exam_dir); set use_glossary=false to disable.
+    use_glossary: bool = True
+    glossary_file: str = "glossary.yaml"
 
     @property
     def exam_dir(self) -> Path:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ..kg import KnowledgeGraph, NodeType, Rel
 from .embed import Embedder
+from .glossary import Glossary
 from .index import HybridIndex
 from .retrievers import CorpusRetriever, MultiRAG, RubricRetriever, TopicRetriever
 from .schema import CorpusChunk, IndexDoc, ScoredSample
@@ -228,17 +229,18 @@ def save_indexes(indexes: dict[str, HybridIndex], directory: Path) -> dict[str, 
     return counts
 
 
-def load_multirag(directory: Path, embedder: Embedder, kg: KnowledgeGraph | None) -> MultiRAG:
+def multirag_from(
+    indexes: dict[str, HybridIndex], kg: KnowledgeGraph | None, glossary: Glossary | None = None
+) -> MultiRAG:
     return MultiRAG(
-        corpus=CorpusRetriever(HybridIndex.load(directory / "corpus", embedder)),
-        rubric=RubricRetriever(HybridIndex.load(directory / "rubric", embedder)),
-        topic=TopicRetriever(HybridIndex.load(directory / "topic", embedder), kg),
+        corpus=CorpusRetriever(indexes["corpus"], glossary),
+        rubric=RubricRetriever(indexes["rubric"], glossary),
+        topic=TopicRetriever(indexes["topic"], kg, glossary),
     )
 
 
-def multirag_from(indexes: dict[str, HybridIndex], kg: KnowledgeGraph | None) -> MultiRAG:
-    return MultiRAG(
-        corpus=CorpusRetriever(indexes["corpus"]),
-        rubric=RubricRetriever(indexes["rubric"]),
-        topic=TopicRetriever(indexes["topic"], kg),
-    )
+def load_multirag(
+    directory: Path, embedder: Embedder, kg: KnowledgeGraph | None, glossary: Glossary | None = None
+) -> MultiRAG:
+    indexes = {name: HybridIndex.load(directory / name, embedder) for name in SOURCES}
+    return multirag_from(indexes, kg, glossary)

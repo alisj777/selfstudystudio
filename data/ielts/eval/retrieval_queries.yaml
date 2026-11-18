@@ -1,0 +1,51 @@
+# Retrieval evaluation set. A result counts as relevant when its id equals an
+# entry in `expected` or starts with it (so "crit.writing.CC" matches any CC band).
+# Queries are written as a learner would phrase them: paraphrases, informal
+# wording and some Chinese. Written before the glossary, to avoid tuning to it.
+
+queries:
+  # ---------------- rubric (band descriptors) ----------------
+  - {id: r01, source: rubric, skill: writing, query: "linking words overused", expected: [crit.writing.CC]}
+  - {id: r02, source: rubric, skill: writing, query: "too many transition words like moreover and furthermore", expected: [crit.writing.CC]}
+  - {id: r03, source: rubric, skill: writing, query: "my report has no clear summary of the main trends", expected: [crit.writing.TA]}
+  - {id: r04, source: rubric, skill: writing, query: "did not answer every part of the question", expected: [crit.writing.TR]}
+  - {id: r05, source: rubric, skill: writing, query: "my opinion is not clear in the essay", expected: [crit.writing.TR]}
+  - {id: r06, source: rubric, skill: writing, query: "lots of spelling mistakes", expected: [crit.writing.LR]}
+  - {id: r07, source: rubric, skill: writing, query: "wrong word choice and unnatural word combinations", expected: [crit.writing.LR]}
+  - {id: r08, source: rubric, skill: writing, query: "I only write short simple sentences", expected: [crit.writing.GRA]}
+  - {id: r09, source: rubric, skill: writing, query: "many grammar mistakes in long sentences", expected: [crit.writing.GRA]}
+  - {id: r10, source: rubric, skill: writing, query: "paragraphs are not organised logically", expected: [crit.writing.CC]}
+  - {id: r11, source: rubric, skill: speaking, query: "I keep pausing to find the right word when speaking", expected: [crit.speaking.FC]}
+  - {id: r12, source: rubric, skill: speaking, query: "examiner finds my accent and intonation hard to follow", expected: [crit.speaking.P]}
+  - {id: r13, source: rubric, skill: speaking, query: "I get stuck when I don't know a word and can't say it another way", expected: [crit.speaking.LR]}
+  - {id: r14, source: rubric, skill: writing, query: "连接词用得太多", expected: [crit.writing.CC], lang: zh}
+  - {id: r15, source: rubric, skill: speaking, query: "口语发音不清楚", expected: [crit.speaking.P], lang: zh}
+  - {id: r16, source: rubric, skill: writing, query: "I repeat the same nouns instead of using pronouns", expected: [crit.writing.CC]}
+
+  # ---------------- topic ----------------
+  - {id: t01, source: topic, skill: writing, query: "e-learning and studying via the internet", expected: [topic.education.online]}
+  - {id: t02, source: topic, skill: writing, query: "kids and their schooling", expected: [topic.education.children]}
+  - {id: t03, source: topic, skill: writing, query: "global warming and greenhouse gases", expected: [topic.environment.climate]}
+  - {id: t04, source: topic, skill: writing, query: "robots taking people's jobs", expected: [topic.technology.ai]}
+  - {id: t05, source: topic, skill: writing, query: "elderly people and pensions", expected: [topic.society.ageing]}
+  - {id: t06, source: topic, skill: writing, query: "people leaving the countryside for cities", expected: [topic.urban.housing]}
+  - {id: t07, source: topic, skill: writing, query: "teenagers eating unhealthy snacks and getting fat", expected: [topic.health.diet]}
+  - {id: t08, source: topic, skill: writing, query: "too many visitors at famous landmarks", expected: [topic.culture.tourism]}
+  - {id: t09, source: topic, skill: writing, query: "should criminals get longer jail terms", expected: [topic.society.crime]}
+  - {id: t10, source: topic, skill: writing, query: "doing your job from your own house", expected: [topic.work.remote]}
+  - {id: t11, source: topic, skill: writing, query: "环境污染", expected: [topic.environment], lang: zh}
+  - {id: t12, source: topic, skill: speaking, query: "what do you like doing in your spare time", expected: [topic.personal.hobbies]}
+  - {id: t13, source: topic, skill: writing, query: "plastic bags and rubbish", expected: [topic.environment.waste]}
+  - {id: t14, source: topic, skill: writing, query: "should taxpayers fund painting exhibitions and concerts", expected: [topic.culture.arts]}
+
+  # ---------------- corpus (questions) ----------------
+  - {id: c01, source: corpus, skill: writing, query: "students learning online instead of in lecture halls", expected: [orig-w2-001]}
+  - {id: c02, source: corpus, skill: writing, query: "cars clogging city roads", expected: [orig-w2-003]}
+  - {id: c03, source: corpus, skill: writing, query: "employees working remotely pros and cons", expected: [orig-w2-004]}
+  - {id: c04, source: corpus, skill: writing, query: "wasting food", expected: [orig-w2-005]}
+  - {id: c05, source: corpus, skill: writing, query: "will AI lead to unemployment", expected: [orig-w2-007]}
+  - {id: c06, source: corpus, skill: speaking, query: "talk about a holiday you enjoyed", expected: [orig-s2-001]}
+  - {id: c07, source: corpus, skill: speaking, query: "a person who taught you something important", expected: [orig-s2-002]}
+  - {id: c08, source: corpus, skill: writing, query: "chart about homes connected to the web", expected: [orig-w1-001]}
+  - {id: c09, source: corpus, skill: writing, query: "how bottles are made into clothes", expected: [orig-w1-002]}
+  - {id: c10, source: corpus, skill: writing, query: "growing number of old people in society", expected: [orig-w2-009]}

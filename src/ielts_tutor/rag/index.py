@@ -81,15 +81,27 @@ class HybridIndex:
         ]
         return np.asarray(keep, dtype=int)
 
-    def search(self, query: str, k: int = 5, filters: Mapping[str, Any] | None = None) -> list[Hit]:
+    def search(
+        self,
+        query: str,
+        k: int = 5,
+        filters: Mapping[str, Any] | None = None,
+        *,
+        bm25_query: str | None = None,
+        symmetric: bool = False,
+    ) -> list[Hit]:
+        """`bm25_query` overrides the keyword-side text (e.g. glossary-expanded).
+        `symmetric=True` embeds the query like a document (essay-to-essay similarity)
+        instead of as a short search query."""
         if not self.docs:
             return []
         candidates = self.filter_ids(filters)
         if candidates.size == 0:
             return []
-        qvec = self.embedder.embed([query])[0]
+        embed = self.embedder.embed if symmetric else self.embedder.embed_query
+        qvec = embed([query])[0]
         dense = self._vectors[candidates] @ qvec
-        bm25 = self._bm25_scores(query)[candidates]
+        bm25 = self._bm25_scores(bm25_query or query)[candidates]
 
         dense_rank = np.empty_like(candidates)
         dense_rank[np.argsort(-dense, kind="stable")] = np.arange(candidates.size)
