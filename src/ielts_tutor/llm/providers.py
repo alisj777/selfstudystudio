@@ -22,12 +22,13 @@ class AnthropicClient:
     name = "anthropic"
     _FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-    def __init__(self, model: str, effort: str = "medium", max_tokens: int = 16000):
+    def __init__(self, model: str, effort: str = "medium", max_tokens: int = 16000, api_key: str | None = None):
         try:
             import anthropic
         except ImportError as exc:  # pragma: no cover - depends on extras
             raise LLMError("Install the anthropic extra: uv sync --extra anthropic") from exc
-        self._client = anthropic.Anthropic()
+        # api_key=None lets the SDK use ANTHROPIC_API_KEY from the environment or a saved profile.
+        self._client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
         self.model = model
         self.effort = effort
         self.max_tokens = max_tokens
@@ -66,19 +67,25 @@ class OpenAICompatibleClient:
 
     name = "openai"
 
-    def __init__(self, model: str, base_url: str | None = None, max_tokens: int = 16000):
+    def __init__(
+        self, model: str, base_url: str | None = None, max_tokens: int = 16000, api_key: str | None = None
+    ):
         try:
             import openai
         except ImportError as exc:  # pragma: no cover - depends on extras
             raise LLMError("Install the openai extra: uv sync --extra openai") from exc
-        self._client = openai.OpenAI(base_url=base_url) if base_url else openai.OpenAI()
+        kwargs = {k: v for k, v in {"base_url": base_url, "api_key": api_key}.items() if v}
+        if base_url and not api_key:
+            kwargs["api_key"] = "not-needed"  # local servers (Ollama / vLLM) ignore the key
+        self._client = openai.OpenAI(**kwargs)
         self.model = model
         self.max_tokens = max_tokens
 
     def _chat(self, messages: list[Message], system: str | None, **extra) -> str:
         msgs = ([{"role": "system", "content": system}] if system else []) + _as_dicts(messages)
+        # max_completion_tokens replaces max_tokens (rejected by reasoning models such as gpt-5).
         resp = self._client.chat.completions.create(
-            model=self.model, messages=msgs, max_tokens=self.max_tokens, **extra
+            model=self.model, messages=msgs, max_completion_tokens=self.max_tokens, **extra
         )
         return resp.choices[0].message.content or ""
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +26,15 @@ class Settings(BaseSettings):
     llm_effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     llm_max_tokens: int = 16000
 
+    # API keys may sit in .env under their usual names; they are passed to the SDK
+    # explicitly because pydantic-settings does not export .env into os.environ.
+    anthropic_api_key: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("ANTHROPIC_API_KEY", "IELTS_ANTHROPIC_API_KEY")
+    )
+    openai_api_key: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("OPENAI_API_KEY", "IELTS_OPENAI_API_KEY")
+    )
+
     # Embeddings: "sentence-transformers" loads embedding_model (semantic search);
     # "hashing" needs no download and only matches surface words (tests, offline demos).
     embedder: Literal["hashing", "sentence-transformers"] = "sentence-transformers"
@@ -33,6 +43,14 @@ class Settings(BaseSettings):
     # Query expansion glossary (relative to exam_dir); set use_glossary=false to disable.
     use_glossary: bool = True
     glossary_file: str = "glossary.yaml"
+
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+    ):
+        # The project's .env wins over variables exported in the shell, so a stale
+        # global OPENAI_API_KEY / ANTHROPIC_API_KEY cannot shadow the project key.
+        return init_settings, dotenv_settings, env_settings, file_secret_settings
 
     @property
     def exam_dir(self) -> Path:

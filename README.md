@@ -11,7 +11,7 @@
 uv sync                      # 核心依赖
 uv sync --extra anthropic    # 使用 Claude；或 --extra openai（OpenAI / Ollama / vLLM）
 uv sync --extra embeddings   # 语义嵌入（默认 BAAI/bge-small-en-v1.5）
-cp .env.example .env
+cp .env.example .env         # 填入 API key；.env 中的值优先于 shell 里导出的同名变量
 
 uv run ielts-tutor build                                   # 加载图谱、校验、建三路索引 -> var/
 uv run ielts-tutor search "traffic in big cities" -k 5     # 三路融合检索

@@ -20,8 +20,15 @@ __all__ = [
 
 def get_llm(settings: Settings | None = None) -> LLMClient:
     s = settings or get_settings()
+    def key(secret):
+        return secret.get_secret_value() if secret else None
+
     if s.llm_provider == "anthropic":
-        return AnthropicClient(model=s.llm_model, effort=s.llm_effort, max_tokens=s.llm_max_tokens)
+        return AnthropicClient(
+            model=s.llm_model, effort=s.llm_effort, max_tokens=s.llm_max_tokens, api_key=key(s.anthropic_api_key)
+        )
     if s.llm_provider == "openai":
-        return OpenAICompatibleClient(model=s.llm_model, base_url=s.llm_base_url, max_tokens=s.llm_max_tokens)
+        return OpenAICompatibleClient(
+            model=s.llm_model, base_url=s.llm_base_url, max_tokens=s.llm_max_tokens, api_key=key(s.openai_api_key)
+        )
     return FakeLLM()
