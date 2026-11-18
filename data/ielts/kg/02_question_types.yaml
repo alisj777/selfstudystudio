@@ -1,0 +1,68 @@
+# Question types per skill (Academic module).
+type: QuestionType
+nodes:
+  # ---------- writing task 1 ----------
+  - {id: qt.writing.t1.line_graph, name: "Task 1 line graph", skill: writing, task: task1, words: 150}
+  - {id: qt.writing.t1.bar_chart, name: "Task 1 bar chart", skill: writing, task: task1, words: 150}
+  - {id: qt.writing.t1.pie_chart, name: "Task 1 pie chart", skill: writing, task: task1, words: 150}
+  - {id: qt.writing.t1.table, name: "Task 1 table", skill: writing, task: task1, words: 150}
+  - {id: qt.writing.t1.process, name: "Task 1 process diagram", skill: writing, task: task1, words: 150}
+  - {id: qt.writing.t1.map, name: "Task 1 map comparison", skill: writing, task: task1, words: 150}
+  - {id: qt.writing.t1.mixed, name: "Task 1 mixed charts", skill: writing, task: task1, words: 150}
+  # ---------- writing task 2 ----------
+  - id: qt.writing.t2.opinion
+    name: "Task 2 opinion (agree or disagree)"
+    skill: writing
+    task: task2
+    words: 250
+    prompt_cues: ["To what extent do you agree or disagree?", "Do you agree or disagree?"]
+  - id: qt.writing.t2.discussion
+    name: "Task 2 discuss both views"
+    skill: writing
+    task: task2
+    words: 250
+    prompt_cues: ["Discuss both these views and give your own opinion."]
+  - id: qt.writing.t2.adv_disadv
+    name: "Task 2 advantages and disadvantages"
+    skill: writing
+    task: task2
+    words: 250
+    prompt_cues: ["Do the advantages outweigh the disadvantages?", "What are the advantages and disadvantages?"]
+  - id: qt.writing.t2.problem_solution
+    name: "Task 2 problem / cause and solution"
+    skill: writing
+    task: task2
+    words: 250
+    prompt_cues: ["What are the causes of this problem and what measures could be taken?"]
+  - id: qt.writing.t2.two_part
+    name: "Task 2 two-part question"
+    skill: writing
+    task: task2
+    words: 250
+    prompt_cues: ["Why is this the case? Is this a positive or negative development?"]
+  # ---------- speaking ----------
+  - {id: qt.speaking.part1, name: "Speaking Part 1 interview", skill: speaking, duration: "4-5 min", description: "Short questions on familiar topics such as home, work, study and interests."}
+  - {id: qt.speaking.part2, name: "Speaking Part 2 long turn (cue card)", skill: speaking, duration: "1 min prep + 1-2 min talk", description: "Talk about a topic from a cue card with prompts."}
+  - {id: qt.speaking.part3, name: "Speaking Part 3 discussion", skill: speaking, duration: "4-5 min", description: "Abstract discussion questions linked to the Part 2 topic."}
+  # ---------- reading ----------
+  - {id: qt.reading.tfng, name: "True / False / Not Given", skill: reading}
+  - {id: qt.reading.ynng, name: "Yes / No / Not Given", skill: reading}
+  - {id: qt.reading.matching_headings, name: "Matching headings", skill: reading}
+  - {id: qt.reading.matching_information, name: "Matching information to paragraphs", skill: reading}
+  - {id: qt.reading.matching_features, name: "Matching features", skill: reading}
+  - {id: qt.reading.matching_endings, name: "Matching sentence endings", skill: reading}
+  - {id: qt.reading.mcq, name: "Reading multiple choice", skill: reading}
+  - {id: qt.reading.sentence_completion, name: "Reading sentence completion", skill: reading}
+  - {id: qt.reading.summary_completion, name: "Summary / note / table completion", skill: reading}
+  - {id: qt.reading.diagram_label, name: "Diagram label completion", skill: reading}
+  - {id: qt.reading.short_answer, name: "Reading short-answer questions", skill: reading}
+  # ---------- listening ----------
+  - {id: qt.listening.form_completion, name: "Form completion", skill: listening}
+  - {id: qt.listening.note_completion, name: "Note completion", skill: listening}
+  - {id: qt.listening.table_completion, name: "Table completion", skill: listening}
+  - {id: qt.listening.mcq, name: "Listening multiple choice", skill: listening}
+  - {id: qt.listening.map_labelling, name: "Map labelling", skill: listening}
+  - {id: qt.listening.diagram_labelling, name: "Plan / diagram labelling", skill: listening}
+  - {id: qt.listening.matching, name: "Listening matching", skill: listening}
+  - {id: qt.listening.sentence_completion, name: "Listening sentence completion", skill: listening}
+  - {id: qt.listening.short_answer, name: "Listening short-answer questions", skill: listening}

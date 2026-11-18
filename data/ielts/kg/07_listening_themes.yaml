@@ -1,0 +1,63 @@
+# Listening themes by section. Section 1-2: everyday social contexts; Section 3-4: education and training.
+type: ListeningTheme
+nodes:
+  - id: lt.s1.booking
+    name: Booking accommodation or a service
+    section: 1
+    scenario: "A phone call between a customer and an agent booking a hotel, holiday rental or venue"
+    keywords: [reservation, dates, price per night, deposit, address, phone number]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.form_completion, qt.listening.note_completion]}
+  - id: lt.s1.enrolment
+    name: Joining a club or enrolling in a course
+    section: 1
+    scenario: "An enquiry about membership, class times and fees"
+    keywords: [membership, fees, schedule, beginners, registration]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.form_completion, qt.listening.table_completion]}
+  - id: lt.s1.job_enquiry
+    name: Job or volunteer enquiry
+    section: 1
+    scenario: "A caller asks about a part-time job or volunteering role"
+    keywords: [experience, availability, duties, pay, references]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.note_completion, qt.listening.form_completion]}
+  - id: lt.s1.lost_property
+    name: Reporting lost property or a problem
+    section: 1
+    scenario: "A customer reports a lost item or a fault and gives details"
+    keywords: [description, colour, location, date, contact details]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.form_completion]}
+  - id: lt.s2.tour
+    name: Guided tour or facility orientation
+    section: 2
+    scenario: "A guide describes a site, museum, park or new building"
+    keywords: [map, entrance, opening hours, facilities, directions]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.map_labelling, qt.listening.mcq, qt.listening.matching]}
+  - id: lt.s2.community
+    name: Community event or local service announcement
+    section: 2
+    scenario: "A radio talk or speech about a local event, festival or service"
+    keywords: [event programme, volunteers, safety rules, tickets]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.mcq, qt.listening.note_completion, qt.listening.matching]}
+  - id: lt.s3.assignment
+    name: Discussing an assignment with a tutor
+    section: 3
+    scenario: "A student and tutor discuss feedback, research methods or a dissertation"
+    keywords: [research method, literature review, deadline, feedback, data collection]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.mcq, qt.listening.matching, qt.listening.sentence_completion]}
+  - id: lt.s3.group_project
+    name: Group project planning
+    section: 3
+    scenario: "Two or three students divide tasks and evaluate options for a presentation"
+    keywords: [presentation, responsibilities, sources, survey, conclusions]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.matching, qt.listening.mcq, qt.listening.table_completion]}
+  - id: lt.s4.lecture_science
+    name: Academic lecture on natural science
+    section: 4
+    scenario: "A monologue lecture on biology, ecology or earth science"
+    keywords: [species, habitat, experiment, findings, adaptation]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.note_completion, qt.listening.sentence_completion]}
+  - id: lt.s4.lecture_humanities
+    name: Academic lecture on history or society
+    section: 4
+    scenario: "A monologue lecture on history, archaeology, psychology or business"
+    keywords: [period, evidence, theory, impact, case study]
+    edges: {HAS_QUESTION_TYPE: [qt.listening.note_completion, qt.listening.diagram_labelling]}

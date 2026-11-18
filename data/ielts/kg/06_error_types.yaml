@@ -1,0 +1,24 @@
+# Error types, aligned with ERRANT operation-independent categories, mapped to the
+# grammar points they reveal (INDICATES) and the criteria they lower (AFFECTS).
+type: ErrorType
+nodes:
+  - {id: err.det, name: Determiner / article error, errant: DET, edges: {INDICATES: [gp.articles], AFFECTS: [crit.writing.GRA, crit.speaking.GRA]}}
+  - {id: err.noun_num, name: Noun number error, errant: "NOUN:NUM", edges: {INDICATES: [gp.countable, gp.svagreement], AFFECTS: [crit.writing.GRA, crit.speaking.GRA]}}
+  - {id: err.noun_poss, name: Possessive noun error, errant: "NOUN:POSS", edges: {INDICATES: [gp.punctuation], AFFECTS: [crit.writing.GRA]}}
+  - {id: err.verb_sva, name: Subject-verb agreement error, errant: "VERB:SVA", edges: {INDICATES: [gp.svagreement], AFFECTS: [crit.writing.GRA, crit.speaking.GRA]}}
+  - {id: err.verb_tense, name: Verb tense error, errant: "VERB:TENSE", edges: {INDICATES: [gp.present_perfect, gp.past_tenses, gp.tense_consistency, gp.future_forms, gp.passive], AFFECTS: [crit.writing.GRA, crit.speaking.GRA]}}
+  - {id: err.verb_form, name: Verb form error, errant: "VERB:FORM", edges: {INDICATES: [gp.gerund_infinitive, gp.modals, gp.passive], AFFECTS: [crit.writing.GRA, crit.speaking.GRA]}}
+  - {id: err.prep, name: Preposition error, errant: PREP, edges: {INDICATES: [gp.prepositions], AFFECTS: [crit.writing.GRA, crit.writing.LR]}}
+  - {id: err.pron, name: Pronoun error, errant: PRON, edges: {INDICATES: [gp.relative_clauses, gp.cohesive_devices], AFFECTS: [crit.writing.GRA, crit.writing.CC]}}
+  - {id: err.conj, name: Conjunction error, errant: CONJ, edges: {INDICATES: [gp.complex_sentences, gp.cohesive_devices], AFFECTS: [crit.writing.GRA, crit.writing.CC]}}
+  - {id: err.adj, name: Adjective error, errant: ADJ, edges: {INDICATES: [gp.comparatives], AFFECTS: [crit.writing.LR, crit.writing.GRA]}}
+  - {id: err.adj_form, name: Comparative / superlative form error, errant: "ADJ:FORM", edges: {INDICATES: [gp.comparatives], AFFECTS: [crit.writing.GRA]}}
+  - {id: err.adv, name: Adverb error, errant: ADV, edges: {INDICATES: [gp.data_language], AFFECTS: [crit.writing.LR, crit.writing.GRA]}}
+  - {id: err.word_order, name: Word order error, errant: WO, edges: {INDICATES: [gp.inversion, gp.noun_clauses], AFFECTS: [crit.writing.GRA, crit.speaking.GRA]}}
+  - {id: err.punct, name: Punctuation error, errant: PUNCT, edges: {INDICATES: [gp.punctuation, gp.sentence_boundaries], AFFECTS: [crit.writing.GRA]}}
+  - {id: err.morph, name: Word formation error, errant: MORPH, edges: {AFFECTS: [crit.writing.LR, crit.speaking.LR]}}
+  - {id: err.spell, name: Spelling error, errant: SPELL, edges: {AFFECTS: [crit.writing.LR]}}
+  - {id: err.orth, name: Capitalisation / spacing error, errant: ORTH, edges: {AFFECTS: [crit.writing.GRA]}}
+  - {id: err.noun, name: Wrong noun choice, errant: NOUN, edges: {AFFECTS: [crit.writing.LR, crit.speaking.LR]}}
+  - {id: err.verb, name: Wrong verb choice, errant: VERB, edges: {AFFECTS: [crit.writing.LR, crit.speaking.LR]}}
+  - {id: err.other, name: Other error, errant: OTHER, edges: {AFFECTS: [crit.writing.GRA]}}

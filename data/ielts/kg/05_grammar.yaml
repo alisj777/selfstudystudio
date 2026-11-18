@@ -1,0 +1,175 @@
+# Grammar points relevant to IELTS GRA. `cefr` is the typical level at which a point is mastered.
+type: GrammarPoint
+nodes:
+  - id: gp.svagreement
+    name: Subject-verb agreement
+    cefr: A2
+    pattern: "Singular subject + singular verb; plural subject + plural verb"
+    common_errors: ["The number of students have increased", "Everyone have"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]}
+  - id: gp.articles
+    name: Articles (a / an / the / zero)
+    cefr: B1
+    pattern: "a/an for first mention of countable singular; the for specific; zero article for general plurals and uncountables"
+    common_errors: ["The pollution is serious problem", "in a society of today"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]}
+  - id: gp.countable
+    name: Countable and uncountable nouns
+    cefr: A2
+    pattern: "much/little + uncountable; many/few + plural countable"
+    common_errors: ["many informations", "advices", "a research"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.writing.LR]}
+  - id: gp.present_simple_continuous
+    name: Present simple vs present continuous
+    cefr: A2
+    pattern: "Habits and facts vs actions in progress / temporary situations"
+    common_errors: ["I am living here since 2019", "People are thinking that"]
+    edges: {EVIDENCES: [crit.speaking.GRA]}
+  - id: gp.present_perfect
+    name: Present perfect
+    cefr: B1
+    pattern: "have/has + past participle for experience and change up to now"
+    common_errors: ["I live here for five years", "The figure has risen in 2010"]
+    edges:
+      EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]
+      PREREQUISITE_OF: [gp.tense_consistency]
+  - id: gp.past_tenses
+    name: Past simple, continuous and perfect
+    cefr: B1
+    pattern: "Narrating completed events, background actions and earlier past"
+    common_errors: ["Yesterday I go", "When I arrived, the film already started"]
+    edges:
+      EVIDENCES: [crit.speaking.GRA, crit.writing.GRA]
+      PREREQUISITE_OF: [gp.tense_consistency]
+  - id: gp.tense_consistency
+    name: Tense consistency in data description
+    cefr: B2
+    pattern: "Past tenses for past data, future forms for projections, no unmotivated switches"
+    common_errors: ["In 1990 the figure rises", "By 2030 it reached"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.writing.TA]}
+  - id: gp.future_forms
+    name: Future forms and predictions
+    cefr: B1
+    pattern: "will, be going to, is expected/projected to, is likely to"
+    common_errors: ["It will be expected to grow"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]}
+  - id: gp.passive
+    name: Passive voice
+    cefr: B1
+    pattern: "be + past participle; used for processes and impersonal statements"
+    common_errors: ["The water is heat", "It is believe that"]
+    edges:
+      EVIDENCES: [crit.writing.GRA]
+      PREREQUISITE_OF: [gp.impersonal]
+  - id: gp.impersonal
+    name: Impersonal structures
+    cefr: B2
+    pattern: "It is widely believed that..., It could be argued that..., There is a growing tendency to..."
+    common_errors: ["It is argued by many people think that"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.writing.LR]}
+  - id: gp.modals
+    name: Modal verbs for possibility and obligation
+    cefr: B1
+    pattern: "should, must, might, could, ought to + base verb"
+    common_errors: ["Government should to invest", "It can causes problems"]
+    edges:
+      EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]
+      PREREQUISITE_OF: [gp.hedging]
+  - id: gp.hedging
+    name: Hedging and softening claims
+    cefr: B2
+    pattern: "tend to, appear to, may well, to some extent, arguably"
+    common_errors: ["All people always think", "This definitely will destroy"]
+    edges: {EVIDENCES: [crit.writing.TR, crit.writing.LR]}
+  - id: gp.conditionals
+    name: Conditionals (zero, first, second)
+    cefr: B1
+    pattern: "If + present, will...; If + past, would..."
+    common_errors: ["If people will recycle, it reduces", "If I would have money"]
+    edges:
+      EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]
+      PREREQUISITE_OF: [gp.mixed_conditionals]
+  - id: gp.mixed_conditionals
+    name: Third and mixed conditionals
+    cefr: B2
+    pattern: "If + past perfect, would have...; If + past perfect, would + base"
+    common_errors: ["If I studied harder, I would have passed"]
+    edges: {EVIDENCES: [crit.speaking.GRA, crit.writing.GRA]}
+  - id: gp.relative_clauses
+    name: Defining and non-defining relative clauses
+    cefr: B1
+    pattern: "who/which/that/whose/where; commas for non-defining clauses"
+    common_errors: ["People who they live in cities", "London, that is the capital,"]
+    edges:
+      EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]
+      PREREQUISITE_OF: [gp.reduced_relatives]
+  - id: gp.reduced_relatives
+    name: Reduced relative and participle clauses
+    cefr: B2
+    pattern: "Students living in cities...; Compared with 2000, ...; Having finished, ..."
+    common_errors: ["Compare with 2000, the figure", "Living in the city, the traffic is bad"]
+    edges: {EVIDENCES: [crit.writing.GRA]}
+  - id: gp.noun_clauses
+    name: Noun clauses
+    cefr: B2
+    pattern: "What matters is..., Whether ... depends on..., The fact that..."
+    common_errors: ["What is important is people should", "The reason is because"]
+    edges: {EVIDENCES: [crit.writing.GRA]}
+  - id: gp.complex_sentences
+    name: Complex sentences with subordinators
+    cefr: B1
+    pattern: "although, whereas, while, since, unless, so that + clause"
+    common_errors: ["Although it is expensive, but", "Because of people are busy"]
+    edges:
+      EVIDENCES: [crit.writing.GRA, crit.writing.CC]
+      PREREQUISITE_OF: [gp.sentence_boundaries]
+  - id: gp.sentence_boundaries
+    name: Sentence boundaries (run-ons and fragments)
+    cefr: B1
+    pattern: "One main clause per sentence unless joined by a conjunction or semicolon"
+    common_errors: ["Technology is useful, it saves time.", "Because it is cheap."]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.writing.CC]}
+  - id: gp.comparatives
+    name: Comparatives and superlatives
+    cefr: A2
+    pattern: "-er / more ... than; the -est / the most; twice as ... as"
+    common_errors: ["more higher", "the most biggest", "two times higher than"]
+    edges:
+      EVIDENCES: [crit.writing.GRA, crit.writing.TA]
+      PREREQUISITE_OF: [gp.data_language]
+  - id: gp.data_language
+    name: Language of change and proportion
+    cefr: B2
+    pattern: "rose sharply to, a slight decline in, accounted for, the proportion of"
+    common_errors: ["increased to 20% sharply", "the percentage of people was rose"]
+    edges: {EVIDENCES: [crit.writing.TA, crit.writing.LR, crit.writing.GRA]}
+  - id: gp.prepositions
+    name: Dependent prepositions
+    cefr: B1
+    pattern: "Verb/adjective/noun + fixed preposition (depend on, interested in, an increase in)"
+    common_errors: ["discuss about", "an increase of 10% in sales of", "emphasise on"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.writing.LR, crit.speaking.GRA]}
+  - id: gp.gerund_infinitive
+    name: Gerunds and infinitives
+    cefr: B1
+    pattern: "Verb + -ing (avoid, enjoy) vs verb + to-infinitive (decide, want)"
+    common_errors: ["avoid to eat", "look forward to see"]
+    edges: {EVIDENCES: [crit.writing.GRA, crit.speaking.GRA]}
+  - id: gp.inversion
+    name: Inversion and cleft sentences for emphasis
+    cefr: C1
+    pattern: "Not only does..., Rarely do..., It is ... that..."
+    common_errors: ["Not only it reduces"]
+    edges: {EVIDENCES: [crit.writing.GRA]}
+  - id: gp.cohesive_devices
+    name: Linking words and referencing
+    cefr: B1
+    pattern: "however, therefore, in addition; this/these/such + noun for reference"
+    common_errors: ["On the other hand without a contrast", "Moreover, ... Moreover, ..."]
+    edges: {EVIDENCES: [crit.writing.CC, crit.speaking.FC]}
+  - id: gp.punctuation
+    name: Punctuation
+    cefr: B1
+    pattern: "Commas after introductory phrases and around non-defining clauses; no comma splices"
+    common_errors: ["However the figure fell", "In conclusion I believe"]
+    edges: {EVIDENCES: [crit.writing.GRA]}

@@ -1,0 +1,130 @@
+"""Command line: build the knowledge graph and indexes, search them, tag the corpus."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import typer
+
+from .config import get_settings
+from .kg import KnowledgeGraph, load_seed, validate
+from .rag import build_indexes, get_embedder, load_multirag, save_indexes
+from .rag.build import import_scored_csv, load_corpus, load_samples, write_jsonl
+
+app = typer.Typer(help="IELTS tutor data tools", no_args_is_help=True)
+
+
+def _kg_path() -> Path:
+    s = get_settings()
+    return s.index_dir.parent / f"kg_{s.exam}.json"
+
+
+@app.command()
+def build() -> None:
+    """Load the seed ontology, validate it, and build the corpus / rubric / topic indexes."""
+    s = get_settings()
+    kg = load_seed(s.exam_dir / "kg", exam=s.exam)
+    for warning in validate(kg):
+        typer.secho(f"warning: {warning}", fg=typer.colors.YELLOW)
+    kg.to_json(_kg_path())
+    _kg_path().with_suffix(".cypher").write_text(kg.to_cypher(), encoding="utf-8")
+    typer.echo(f"knowledge graph: {kg.stats()}")
+
+    chunks = load_corpus(s.exam_dir / "corpus")
+    samples = load_samples(s.exam_dir / "scoring")
+    counts = save_indexes(build_indexes(kg, chunks, samples, get_embedder(s)), s.index_dir)
+    typer.echo(f"indexes ({get_embedder(s).name}) -> {s.index_dir}: {counts}")
+
+
+@app.command()
+def search(
+    query: str,
+    source: str = typer.Option("all", help="corpus | rubric | topic | all"),
+    k: int = typer.Option(5, "-k", "--top-k", help="Number of results"),
+    skill: str | None = typer.Option(None, help="writing | speaking | reading | listening"),
+) -> None:
+    """Search one RAG source, or all three fused with RRF."""
+    s = get_settings()
+    kg = KnowledgeGraph.from_json(_kg_path())
+    rag = load_multirag(s.index_dir, get_embedder(s), kg)
+    if source == "corpus":
+        results = rag.corpus.retrieve(query, k, skill=skill)
+    elif source == "rubric":
+        results = rag.rubric.search_descriptors(query, k, skill=skill)
+    elif source == "topic":
+        results = rag.topic.retrieve(query, k, skill=skill)
+    else:
+        results = rag.retrieve(query, k=k, skill=skill)
+    for ev in results:
+        typer.echo(f"[{ev.source}] {ev.id}  score={ev.score:.4f}")
+        typer.echo(f"    {ev.text[:160]}")
+
+
+@app.command("kg-stats")
+def kg_stats() -> None:
+    """Show node and edge counts of the built knowledge graph."""
+    typer.echo(json.dumps(KnowledgeGraph.from_json(_kg_path()).stats(), indent=1))
+
+
+@app.command("tag-corpus")
+def tag_corpus(
+    only_untagged: bool = typer.Option(True, help="Skip items that already have topic_ids"),
+    min_confidence: float = 0.7,
+) -> None:
+    """Ask the configured LLM to tag corpus items; writes accepted tags and a review queue."""
+    from .kg.extract import tag_item
+    from .llm import get_llm
+
+    s = get_settings()
+    kg = load_seed(s.exam_dir / "kg", exam=s.exam)
+    llm = get_llm(s)
+    chunks = load_corpus(s.exam_dir / "corpus")
+    review, tagged = [], 0
+    for chunk in chunks:
+        if only_untagged and chunk.topic_ids:
+            continue
+        item = tag_item(llm, kg, chunk.chunk_id, chunk.text, chunk.skill, min_confidence)
+        if item.reasons:
+            review.append(item)
+        else:
+            chunk.topic_ids = item.tags.topic_ids
+            chunk.question_type = chunk.question_type or item.tags.question_type
+            chunk.grammar_ids = item.tags.grammar_ids
+            tagged += 1
+    out_dir = s.index_dir.parent / "review"
+    write_jsonl(out_dir / "tagged_corpus.jsonl", chunks)
+    write_jsonl(out_dir / "review_queue.jsonl", review)
+    typer.echo(f"auto-accepted {tagged}, sent {len(review)} to {out_dir / 'review_queue.jsonl'}")
+    typer.echo(f"tagged corpus written to {out_dir / 'tagged_corpus.jsonl'} (copy into data/ once reviewed)")
+
+
+@app.command("import-scored")
+def import_scored(
+    csv_path: Path,
+    text_col: str = typer.Option(..., help="Column holding the essay"),
+    overall_col: str = typer.Option(..., help="Column holding the overall band"),
+    tr_col: str | None = None,
+    cc_col: str | None = None,
+    lr_col: str | None = None,
+    gra_col: str | None = None,
+    prompt_col: str | None = None,
+    task: str = "task2",
+    name: str = "imported",
+) -> None:
+    """Convert a scored-essay CSV into rubric-RAG samples under data/<exam>/scoring/."""
+    cols = {"overall": overall_col, "TR": tr_col, "CC": cc_col, "LR": lr_col, "GRA": gra_col}
+    samples = import_scored_csv(
+        csv_path,
+        text_col=text_col,
+        score_cols={k: v for k, v in cols.items() if v},
+        prompt_col=prompt_col,
+        task=task,
+        id_prefix=name,
+    )
+    out = get_settings().exam_dir / "scoring" / f"{name}.jsonl"
+    typer.echo(f"wrote {write_jsonl(out, samples)} samples to {out}")
+
+
+if __name__ == "__main__":
+    app()

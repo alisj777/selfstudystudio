@@ -1,0 +1,112 @@
+# Writing structures. `paragraphs` is the recommended plan; `template` is a one-line outline.
+type: EssayStructure
+nodes:
+  - id: es.t2.opinion
+    name: Opinion essay (agree / disagree)
+    task: task2
+    paragraphs:
+      - "Introduction: paraphrase the question and state a clear position"
+      - "Body 1: first main reason, explained and supported with an example"
+      - "Body 2: second main reason, explained and supported with an example"
+      - "Optional body 3: concession to the other side and rebuttal"
+      - "Conclusion: restate the position and summarise the reasons"
+    template: "Intro + position -> reason 1 -> reason 2 -> (concession) -> conclusion"
+    edges:
+      SUITS: [qt.writing.t2.opinion]
+      EVIDENCES: [crit.writing.TR, crit.writing.CC]
+  - id: es.t2.discussion
+    name: Discuss both views
+    task: task2
+    paragraphs:
+      - "Introduction: paraphrase both views and signal your own opinion"
+      - "Body 1: the first view with reasons and an example"
+      - "Body 2: the second view with reasons and an example"
+      - "Conclusion: your own opinion, consistent with the introduction"
+    template: "Intro (both views + opinion) -> view A -> view B -> conclusion with opinion"
+    edges:
+      SUITS: [qt.writing.t2.discussion]
+      EVIDENCES: [crit.writing.TR, crit.writing.CC]
+  - id: es.t2.adv_disadv
+    name: Advantages and disadvantages
+    task: task2
+    paragraphs:
+      - "Introduction: paraphrase and, if asked, state whether advantages outweigh disadvantages"
+      - "Body 1: main advantages, developed"
+      - "Body 2: main disadvantages, developed"
+      - "Conclusion: weigh the two sides and give the overall judgement"
+    template: "Intro -> advantages -> disadvantages -> weighed conclusion"
+    edges:
+      SUITS: [qt.writing.t2.adv_disadv]
+      EVIDENCES: [crit.writing.TR, crit.writing.CC]
+  - id: es.t2.problem_solution
+    name: Problem / cause and solution
+    task: task2
+    paragraphs:
+      - "Introduction: paraphrase the issue and outline the answer"
+      - "Body 1: two causes or problems, each explained with an example"
+      - "Body 2: matching solutions, each linked to a cause"
+      - "Conclusion: summarise causes and solutions"
+    template: "Intro -> causes/problems -> linked solutions -> conclusion"
+    edges:
+      SUITS: [qt.writing.t2.problem_solution]
+      EVIDENCES: [crit.writing.TR, crit.writing.CC]
+  - id: es.t2.two_part
+    name: Two-part question
+    task: task2
+    paragraphs:
+      - "Introduction: paraphrase and give a short answer to both questions"
+      - "Body 1: full answer to question 1"
+      - "Body 2: full answer to question 2"
+      - "Conclusion: restate both answers"
+    template: "Intro (two answers) -> answer 1 -> answer 2 -> conclusion"
+    edges:
+      SUITS: [qt.writing.t2.two_part]
+      EVIDENCES: [crit.writing.TR, crit.writing.CC]
+  - id: es.t1.trend
+    name: Task 1 trend over time
+    task: task1
+    paragraphs:
+      - "Introduction: paraphrase what the chart shows (what, where, when)"
+      - "Overview: two or three main trends, no numbers"
+      - "Body 1: the most significant changes with data"
+      - "Body 2: remaining features and comparisons with data"
+    template: "Intro -> overview -> key changes with data -> other features with data"
+    edges:
+      SUITS: [qt.writing.t1.line_graph, qt.writing.t1.bar_chart, qt.writing.t1.table, qt.writing.t1.mixed]
+      EVIDENCES: [crit.writing.TA, crit.writing.CC]
+  - id: es.t1.comparison
+    name: Task 1 static comparison
+    task: task1
+    paragraphs:
+      - "Introduction: paraphrase what is compared"
+      - "Overview: the largest and smallest categories, the main contrast"
+      - "Body 1: group of related categories with figures"
+      - "Body 2: remaining categories with figures"
+    template: "Intro -> overview -> group A comparisons -> group B comparisons"
+    edges:
+      SUITS: [qt.writing.t1.pie_chart, qt.writing.t1.bar_chart, qt.writing.t1.table]
+      EVIDENCES: [crit.writing.TA, crit.writing.CC]
+  - id: es.t1.process
+    name: Task 1 process
+    task: task1
+    paragraphs:
+      - "Introduction: paraphrase the process"
+      - "Overview: number of stages, start and end point"
+      - "Body 1: first half of the stages in order, passive voice and sequencers"
+      - "Body 2: second half of the stages"
+    template: "Intro -> overview (stages, start/end) -> stages 1..n in order"
+    edges:
+      SUITS: [qt.writing.t1.process]
+      EVIDENCES: [crit.writing.TA, crit.writing.CC]
+  - id: es.t1.map
+    name: Task 1 map comparison
+    task: task1
+    paragraphs:
+      - "Introduction: paraphrase the place and the time span"
+      - "Overview: the most noticeable overall changes"
+      - "Body 1: changes in one area or direction"
+      - "Body 2: changes in the other areas, plus what stayed the same"
+    template: "Intro -> overview -> area-by-area changes"
+    edges:
+      SUITS: [qt.writing.t1.map]
+      EVIDENCES: [crit.writing.TA, crit.writing.CC]

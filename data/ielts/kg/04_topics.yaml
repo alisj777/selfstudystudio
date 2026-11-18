@@ -1,0 +1,263 @@
+# Topic taxonomy for Writing Task 2 and Speaking. `skills` says where a topic mostly appears.
+# Extend with LLM extraction from question banks (see ielts_tutor.kg.extract).
+type: Topic
+nodes:
+  # ---------- education ----------
+  - id: topic.education
+    name: Education
+    skills: [writing, speaking]
+    keywords: [school, university, students, teachers, curriculum, learning]
+    collocations: [academic performance, compulsory education, tuition fees, lifelong learning]
+    edges: {RELATED_TO: [topic.technology, topic.work]}
+  - id: topic.education.online
+    name: Online and distance learning
+    parent: topic.education
+    skills: [writing, speaking]
+    keywords: [online courses, e-learning, remote study, digital classroom]
+    collocations: [face-to-face interaction, self-paced learning, screen time]
+    edges: {RELATED_TO: [topic.technology.internet]}
+  - id: topic.education.higher
+    name: Higher education and university
+    parent: topic.education
+    skills: [writing, speaking]
+    keywords: [university degree, tuition, graduates, vocational training]
+    collocations: [pursue a degree, job prospects, practical skills]
+    edges: {RELATED_TO: [topic.work.employment]}
+  - id: topic.education.children
+    name: Children's education and parenting
+    parent: topic.education
+    skills: [writing, speaking]
+    keywords: [primary school, discipline, homework, parents, play]
+    collocations: [moral values, peer pressure, extracurricular activities]
+    edges: {RELATED_TO: [topic.society.family]}
+
+  # ---------- technology ----------
+  - id: topic.technology
+    name: Technology
+    skills: [writing, speaking]
+    keywords: [technology, innovation, devices, automation, digital]
+    collocations: [technological advances, rely heavily on, cutting-edge]
+  - id: topic.technology.internet
+    name: Internet and social media
+    parent: topic.technology
+    skills: [writing, speaking]
+    keywords: [social media, online communication, smartphones, privacy]
+    collocations: [spread misinformation, stay connected, online presence]
+    edges: {RELATED_TO: [topic.media]}
+  - id: topic.technology.ai
+    name: Artificial intelligence and automation
+    parent: topic.technology
+    skills: [writing]
+    keywords: [artificial intelligence, robots, automation, job losses]
+    collocations: [replace human workers, routine tasks, ethical concerns]
+    edges: {RELATED_TO: [topic.work.employment]}
+
+  # ---------- environment ----------
+  - id: topic.environment
+    name: Environment
+    skills: [writing, speaking]
+    keywords: [environment, pollution, nature, conservation, sustainability]
+    collocations: [environmental protection, ecological balance, long-term consequences]
+  - id: topic.environment.climate
+    name: Climate change
+    parent: topic.environment
+    skills: [writing]
+    keywords: [global warming, carbon emissions, fossil fuels, renewable energy]
+    collocations: [curb emissions, pose a threat to, extreme weather events]
+    edges: {RELATED_TO: [topic.government.policy]}
+  - id: topic.environment.waste
+    name: Waste and recycling
+    parent: topic.environment
+    skills: [writing, speaking]
+    keywords: [plastic, recycling, landfill, packaging, consumerism]
+    collocations: [single-use plastics, reduce waste, throwaway culture]
+  - id: topic.environment.wildlife
+    name: Wildlife and biodiversity
+    parent: topic.environment
+    skills: [writing, speaking]
+    keywords: [endangered species, habitats, zoos, deforestation]
+    collocations: [habitat loss, on the verge of extinction, protect wildlife]
+
+  # ---------- health ----------
+  - id: topic.health
+    name: Health
+    skills: [writing, speaking]
+    keywords: [health, lifestyle, diet, exercise, healthcare]
+    collocations: [sedentary lifestyle, public health, life expectancy]
+  - id: topic.health.diet
+    name: Diet and fitness
+    parent: topic.health
+    skills: [writing, speaking]
+    keywords: [fast food, obesity, sport, nutrition]
+    collocations: [balanced diet, junk food, regular exercise]
+    edges: {RELATED_TO: [topic.lifestyle.food]}
+  - id: topic.health.healthcare
+    name: Healthcare systems
+    parent: topic.health
+    skills: [writing]
+    keywords: [hospitals, public healthcare, ageing population, medicine]
+    collocations: [free healthcare, preventive medicine, healthcare costs]
+    edges: {RELATED_TO: [topic.government.policy]}
+
+  # ---------- work ----------
+  - id: topic.work
+    name: Work and careers
+    skills: [writing, speaking]
+    keywords: [job, career, workplace, salary, employer]
+    collocations: [job satisfaction, career prospects, work-life balance]
+  - id: topic.work.employment
+    name: Employment and unemployment
+    parent: topic.work
+    skills: [writing]
+    keywords: [unemployment, job market, skills, young people]
+    collocations: [youth unemployment, job security, labour market]
+  - id: topic.work.remote
+    name: Remote work and working hours
+    parent: topic.work
+    skills: [writing, speaking]
+    keywords: [working from home, commuting, flexible hours, productivity]
+    collocations: [flexible working arrangements, blur the line between, long working hours]
+    edges: {RELATED_TO: [topic.technology.internet]}
+
+  # ---------- society ----------
+  - id: topic.society
+    name: Society and family
+    skills: [writing, speaking]
+    keywords: [society, community, generations, values]
+    collocations: [social cohesion, generation gap, social norms]
+  - id: topic.society.family
+    name: Family and relationships
+    parent: topic.society
+    skills: [writing, speaking]
+    keywords: [family, parents, elderly, children, marriage]
+    collocations: [extended family, nuclear family, take care of elderly parents]
+  - id: topic.society.ageing
+    name: Ageing population
+    parent: topic.society
+    skills: [writing]
+    keywords: [older people, retirement, pension, birth rate]
+    collocations: [ageing population, retirement age, burden on the economy]
+    edges: {RELATED_TO: [topic.health.healthcare]}
+  - id: topic.society.crime
+    name: Crime and punishment
+    parent: topic.society
+    skills: [writing]
+    keywords: [crime, prison, punishment, police, young offenders]
+    collocations: [deter crime, rehabilitate offenders, harsher sentences]
+    edges: {RELATED_TO: [topic.government.policy]}
+
+  # ---------- government & economy ----------
+  - id: topic.government
+    name: Government and economy
+    skills: [writing]
+    keywords: [government, economy, tax, public spending, policy]
+    collocations: [allocate funding, economic growth, public services]
+  - id: topic.government.policy
+    name: Government spending and policy
+    parent: topic.government
+    skills: [writing]
+    keywords: [budget, taxes, regulation, public money]
+    collocations: [government intervention, impose taxes, invest in infrastructure]
+  - id: topic.government.globalisation
+    name: Globalisation and international trade
+    parent: topic.government
+    skills: [writing]
+    keywords: [globalisation, multinational companies, imports, local economy]
+    collocations: [global economy, cultural homogenisation, international cooperation]
+    edges: {RELATED_TO: [topic.culture]}
+
+  # ---------- culture, media, arts ----------
+  - id: topic.culture
+    name: Culture and tradition
+    skills: [writing, speaking]
+    keywords: [culture, traditions, heritage, festivals, language]
+    collocations: [preserve traditions, cultural identity, cultural diversity]
+  - id: topic.culture.tourism
+    name: Tourism and travel
+    parent: topic.culture
+    skills: [writing, speaking]
+    keywords: [tourists, travel, holidays, local communities]
+    collocations: [mass tourism, boost the local economy, tourist attractions]
+  - id: topic.culture.arts
+    name: Arts, museums and music
+    parent: topic.culture
+    skills: [writing, speaking]
+    keywords: [art, museums, music, galleries, funding for the arts]
+    collocations: [government funding, cultural value, artistic expression]
+  - id: topic.media
+    name: Media and advertising
+    skills: [writing, speaking]
+    keywords: [news, advertising, television, celebrities, consumers]
+    collocations: [mass media, influence consumer behaviour, freedom of the press]
+    edges: {RELATED_TO: [topic.technology.internet]}
+
+  # ---------- cities & transport ----------
+  - id: topic.urban
+    name: Cities and transport
+    skills: [writing, speaking]
+    keywords: [cities, urbanisation, traffic, public transport, housing]
+    collocations: [traffic congestion, urban sprawl, affordable housing]
+    edges: {RELATED_TO: [topic.environment]}
+  - id: topic.urban.transport
+    name: Transport and traffic
+    parent: topic.urban
+    skills: [writing, speaking]
+    keywords: [cars, public transport, cycling, traffic jams]
+    collocations: [ease congestion, public transport network, car ownership]
+  - id: topic.urban.housing
+    name: Housing and urbanisation
+    parent: topic.urban
+    skills: [writing, speaking]
+    keywords: [housing, rural areas, migration to cities, rent]
+    collocations: [rural-urban migration, housing shortage, high cost of living]
+
+  # ---------- science ----------
+  - id: topic.science
+    name: Science and space
+    skills: [writing]
+    keywords: [science, research, space exploration, experiments]
+    collocations: [scientific research, space exploration, funding for research]
+    edges: {RELATED_TO: [topic.technology]}
+
+  # ---------- personal topics (speaking Part 1 / 2) ----------
+  - id: topic.personal
+    name: Personal life
+    skills: [speaking]
+    keywords: [daily life, personal experience, preferences]
+    collocations: [in my spare time, when I was younger]
+  - id: topic.personal.hometown
+    name: Hometown and home
+    parent: topic.personal
+    skills: [speaking]
+    keywords: [hometown, neighbourhood, flat, house]
+    collocations: [bustling city, quiet neighbourhood, grew up in]
+  - id: topic.personal.hobbies
+    name: Hobbies and free time
+    parent: topic.personal
+    skills: [speaking]
+    keywords: [hobbies, reading, sports, games, weekends]
+    collocations: [take up a hobby, unwind after work]
+  - id: topic.personal.study_work
+    name: Study or work
+    parent: topic.personal
+    skills: [speaking]
+    keywords: [major, subject, job, colleagues]
+    collocations: [major in, full-time job, part-time job]
+  - id: topic.personal.people
+    name: People you know
+    parent: topic.personal
+    skills: [speaking]
+    keywords: [friend, family member, teacher, someone you admire]
+    collocations: [look up to, get along well with]
+  - id: topic.personal.events
+    name: Memorable events and experiences
+    parent: topic.personal
+    skills: [speaking]
+    keywords: [trip, celebration, achievement, first time]
+    collocations: [a once-in-a-lifetime experience, it was memorable because]
+  - id: topic.lifestyle.food
+    name: Food and cooking
+    parent: topic.personal
+    skills: [speaking]
+    keywords: [food, cooking, restaurants, traditional dishes]
+    collocations: [home-cooked meals, eat out, local cuisine]
