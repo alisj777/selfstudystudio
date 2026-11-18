@@ -23,6 +23,9 @@ embeddings = [
     # torch >= 2.12 ships macOS 14+ wheels only; keep macOS 13 working.
     "torch<2.12; sys_platform == 'darwin'",
 ]
+data = [
+    "pyarrow>=26.0.1",
+]
 
 [project.scripts]
 ielts-tutor = "ielts_tutor.cli:app"

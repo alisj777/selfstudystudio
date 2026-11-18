@@ -149,6 +149,27 @@ def tag_corpus(
     typer.echo(f"tagged corpus written to {out_dir / 'tagged_corpus.jsonl'} (copy into data/ once reviewed)")
 
 
+@app.command("import-btnotpt")
+def import_btnotpt(
+    holdout: float = typer.Option(0.15, help="Fraction held out (by band) for evaluating the scorer later"),
+) -> None:
+    """Import Hugging Face btnotpt/ielts_task_2 into rubric-RAG samples plus a held-out test set.
+
+    Expects train.parquet / test.parquet in var/downloads/btnotpt_ielts_task_2/.
+    """
+    from .datasets import band_distribution, load_btnotpt, stratified_holdout
+
+    s = get_settings()
+    src = s.index_dir.parent / "downloads" / "btnotpt_ielts_task_2"
+    samples, report = load_btnotpt(src)
+    keep, hold = stratified_holdout(samples, holdout)
+    n1 = write_jsonl(s.exam_dir / "scoring" / "btnotpt.jsonl", keep)
+    n2 = write_jsonl(s.exam_dir / "holdout" / "btnotpt_holdout.jsonl", hold)
+    typer.echo(f"{report}")
+    typer.echo(f"calibration samples: {n1}, held out: {n2}")
+    typer.echo(f"band distribution: {band_distribution(samples)}")
+
+
 @app.command("import-scored")
 def import_scored(
     csv_path: Path,

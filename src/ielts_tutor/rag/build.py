@@ -201,6 +201,7 @@ def rubric_docs(kg: KnowledgeGraph, samples: list[ScoredSample]) -> list[IndexDo
                     "overall": s.scores.get("overall"),
                     "rater": s.rater,
                     "comments": s.comments,
+                    "source": s.source,
                 },
             )
         )

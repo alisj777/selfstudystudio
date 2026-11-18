@@ -41,6 +41,7 @@ class ScoredSample(BaseModel):
     scores: dict[str, float]  # criterion short name -> band, plus "overall"
     rater: Literal["official", "teacher", "model", "dataset"] = "dataset"
     comments: str | None = None
+    source: str | None = None  # where the sample came from, e.g. "hf:<dataset id>"
 
 
 class IndexDoc(BaseModel):

@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 .env
 var/
+# Imported third-party datasets stay local (licensing / provenance unclear)
+data/ielts/scoring/
+data/ielts/holdout/
