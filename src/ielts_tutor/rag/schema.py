@@ -15,7 +15,7 @@ class CorpusChunk(BaseModel):
     chunk_id: str
     exam: str = "ielts"
     skill: Literal["writing", "speaking", "reading", "listening"]
-    source_type: Literal["real_exam", "question_bank", "model_answer", "passage", "transcript"]
+    source_type: Literal["real_exam", "official_sample", "question_bank", "model_answer", "passage", "transcript"]
     question_id: str | None = None
     question_type: str | None = None  # QuestionType node id
     topic_ids: list[str] = Field(default_factory=list)
@@ -25,6 +25,7 @@ class CorpusChunk(BaseModel):
     text: str
     license: str = "internal_only"
     year: int | None = None
+    source: str | None = None  # where the item came from (book, URL)
 
 
 class ScoredSample(BaseModel):

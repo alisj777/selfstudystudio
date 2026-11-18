@@ -7,3 +7,4 @@ var/
 # Imported third-party datasets stay local (licensing / provenance unclear)
 data/ielts/scoring/
 data/ielts/holdout/
+data/ielts/corpus/private/

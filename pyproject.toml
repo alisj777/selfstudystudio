@@ -25,6 +25,7 @@ embeddings = [
 ]
 data = [
     "pyarrow>=26.0.1",
+    "pypdf>=7.1.0",
 ]
 
 [project.scripts]

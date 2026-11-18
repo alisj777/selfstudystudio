@@ -38,7 +38,7 @@ def chunk_text(text: str, max_words: int = 300) -> list[str]:
 
 def split_chunk(chunk: CorpusChunk, max_words: int = 300) -> list[CorpusChunk]:
     """Questions stay whole; passages, transcripts and model answers are split into paragraphs."""
-    if chunk.source_type in ("real_exam", "question_bank"):
+    if chunk.source_type in ("real_exam", "official_sample", "question_bank"):
         return [chunk]
     parts = chunk_text(chunk.text, max_words)
     if len(parts) == 1:
@@ -56,8 +56,10 @@ def load_jsonl(path: Path, model):
 
 
 def load_corpus(directory: Path) -> list[CorpusChunk]:
+    """All *.jsonl under `directory`, including the git-ignored `private/` folder
+    that holds copyrighted material (official samples, Cambridge books)."""
     chunks: list[CorpusChunk] = []
-    for path in sorted(directory.glob("*.jsonl")):
+    for path in sorted(directory.rglob("*.jsonl")):
         chunks.extend(load_jsonl(path, CorpusChunk))
     return chunks
 
@@ -65,7 +67,7 @@ def load_corpus(directory: Path) -> list[CorpusChunk]:
 def load_samples(directory: Path) -> list[ScoredSample]:
     samples: list[ScoredSample] = []
     if directory.exists():
-        for path in sorted(directory.glob("*.jsonl")):
+        for path in sorted(directory.rglob("*.jsonl")):
             samples.extend(load_jsonl(path, ScoredSample))
     return samples
 

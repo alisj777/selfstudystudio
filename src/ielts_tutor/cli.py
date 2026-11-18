@@ -170,6 +170,20 @@ def import_btnotpt(
     typer.echo(f"band distribution: {band_distribution(samples)}")
 
 
+@app.command("import-ielts-org")
+def import_ielts_org() -> None:
+    """Download the free official samples from ielts.org and store them locally (git-ignored)."""
+    from .importers.ielts_org import import_all
+
+    s = get_settings()
+    chunks, samples = import_all(s.index_dir.parent / "downloads")
+    n1 = write_jsonl(s.exam_dir / "corpus" / "private" / "ielts_org.jsonl", chunks)
+    n2 = write_jsonl(s.exam_dir / "scoring" / "private" / "ielts_org.jsonl", samples)
+    typer.echo(f"speaking questions: {n1}, examiner-scored writing responses: {n2}")
+    for smp in samples:
+        typer.echo(f"  {smp.sample_id}: {smp.task} band {smp.scores['overall']} ({len(smp.response_text.split())} words)")
+
+
 @app.command("import-scored")
 def import_scored(
     csv_path: Path,
