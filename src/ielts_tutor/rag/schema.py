@@ -26,6 +26,9 @@ class CorpusChunk(BaseModel):
     license: str = "internal_only"
     year: int | None = None
     source: str | None = None  # where the item came from (book, URL)
+    module: Literal["academic", "general"] | None = None
+    media_uri: str | None = None  # e.g. the listening audio for a transcript
+    quality: float | None = None  # share of recognisable English words (OCR check), 0-1
 
 
 class ScoredSample(BaseModel):
@@ -43,6 +46,7 @@ class ScoredSample(BaseModel):
     rater: Literal["official", "teacher", "model", "dataset"] = "dataset"
     comments: str | None = None
     source: str | None = None  # where the sample came from, e.g. "hf:<dataset id>"
+    quality: float | None = None  # response_text OCR quality, 0-1; None = typed or unknown
 
 
 class IndexDoc(BaseModel):

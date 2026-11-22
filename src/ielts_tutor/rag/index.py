@@ -19,6 +19,8 @@ from .embed import Embedder, tokenize
 from .schema import IndexDoc
 
 RRF_K = 60
+# Weight of the keyword (BM25) ranking in the fusion; the dense ranking has weight 1.
+BM25_WEIGHT = 1.0
 
 
 class Hit(BaseModel):
@@ -45,8 +47,9 @@ def _match(value: Any, cond: Any) -> bool:
 
 
 class HybridIndex:
-    def __init__(self, embedder: Embedder):
+    def __init__(self, embedder: Embedder, bm25_weight: float = BM25_WEIGHT):
         self.embedder = embedder
+        self.bm25_weight = bm25_weight
         self.docs: list[IndexDoc] = []
         self._vectors = np.zeros((0, embedder.dim), dtype=np.float32)
         self._bm25: BM25Okapi | None = None
@@ -107,7 +110,7 @@ class HybridIndex:
         dense_rank[np.argsort(-dense, kind="stable")] = np.arange(candidates.size)
         bm25_rank = np.empty_like(candidates)
         bm25_rank[np.argsort(-bm25, kind="stable")] = np.arange(candidates.size)
-        fused = 1.0 / (RRF_K + dense_rank + 1) + 1.0 / (RRF_K + bm25_rank + 1)
+        fused = 1.0 / (RRF_K + dense_rank + 1) + self.bm25_weight / (RRF_K + bm25_rank + 1)
         # Documents with no lexical overlap get no BM25 credit.
         fused = np.where(bm25 > 0, fused, 1.0 / (RRF_K + dense_rank + 1))
 

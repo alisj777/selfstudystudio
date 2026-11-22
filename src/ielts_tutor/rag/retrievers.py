@@ -153,6 +153,23 @@ class RubricRetriever(_Retriever):
         hits = self.index.search(response_text, k, filters, symmetric=True)
         return [_evidence(self.source, h) for h in hits]
 
+    def examiner_comments(
+        self,
+        query: str,
+        k: int = 3,
+        *,
+        task: str | None = None,
+        around_band: float | None = None,
+        band_window: float = 0.5,
+    ) -> list[Evidence]:
+        """Official examiner comments on scored writing, e.g. how examiners describe a 6.5 Task 2."""
+        filters: dict = {"kind": "examiner_comment"}
+        if task:
+            filters["task"] = task
+        if around_band is not None:
+            filters["overall"] = {"gte": around_band - band_window, "lte": around_band + band_window}
+        return [_evidence(self.source, h) for h in self._search(query, k, filters)]
+
     def knn_band(self, samples: list[Evidence], criterion: str = "overall") -> float | None:
         """Similarity-weighted mean band of retrieved samples (the k-NN prior in the fusion formula)."""
         pairs = [

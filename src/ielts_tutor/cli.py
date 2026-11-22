@@ -184,6 +184,37 @@ def import_ielts_org() -> None:
         typer.echo(f"  {smp.sample_id}: {smp.task} band {smp.scores['overall']} ({len(smp.response_text.split())} words)")
 
 
+@app.command("import-cambridge")
+def import_cambridge(
+    root: Path = typer.Argument(..., help="Folder holding your Cambridge IELTS PDFs (and optional mp3 audio)"),
+    books: list[int] = typer.Option(None, "--book", help="Only these book numbers (repeatable)"),
+) -> None:
+    """Parse your own Cambridge IELTS books into local, git-ignored corpus and scoring files."""
+    from .importers.cambridge import import_books
+    from .rag.build import MIN_CORPUS_QUALITY, MIN_SAMPLE_QUALITY
+
+    s = get_settings()
+    results = import_books(root, s.index_dir.parent / "cache" / "cambridge", books or None)
+    chunks = [c for r in results for c in r.chunks]
+    samples = [x for r in results for x in r.samples]
+    n1 = write_jsonl(s.exam_dir / "corpus" / "private" / "cambridge.jsonl", chunks)
+    n2 = write_jsonl(s.exam_dir / "scoring" / "private" / "cambridge.jsonl", samples)
+    for r in results:
+        if r.skipped:
+            typer.echo(f"  Cambridge {r.book}: skipped, {r.skipped}")
+            continue
+        kinds = {k: sum(1 for c in r.chunks if c.skill == k) for k in ("listening", "reading", "writing", "speaking")}
+        low = sum(1 for c in r.chunks if (c.quality or 1) < MIN_CORPUS_QUALITY)
+        readable = sum(1 for x in r.samples if (x.quality or 0) >= MIN_SAMPLE_QUALITY)
+        typer.echo(
+            f"  Cambridge {r.book}: " + ", ".join(f"{k} {v}" for k, v in kinds.items())
+            + f", audio linked {sum(1 for c in r.chunks if c.media_uri)}"
+            + f", scored writing {len(r.samples)} ({readable} readable essays)"
+            + (f", {low} low-quality items not indexed" if low else "")
+        )
+    typer.echo(f"corpus items: {n1}, examiner-scored writing: {n2}. Run `ielts-tutor build` to re-index.")
+
+
 @app.command("import-scored")
 def import_scored(
     csv_path: Path,

@@ -15,6 +15,12 @@ from .retrievers import CorpusRetriever, MultiRAG, RubricRetriever, TopicRetriev
 from .schema import CorpusChunk, IndexDoc, ScoredSample
 
 SOURCES = ("corpus", "rubric", "topic")
+# Keyword-side weight in the BM25 + dense fusion, per source. The rubric source relies on
+# glossary-expanded keywords; corpus and topic do better leaning on the semantic side once
+# the corpus holds long passages (eval 2026-11-22: all hit@1 0.75 -> 0.82).
+BM25_WEIGHTS = {"corpus": 0.5, "rubric": 1.0, "topic": 0.5}
+MIN_CORPUS_QUALITY = 0.85  # OCR'd items below this share of real words stay out of the index
+MIN_SAMPLE_QUALITY = 0.9  # candidate writing below this is OCR noise: index only its examiner comment
 
 
 # ---------------------------------------------------------------- chunking
@@ -127,6 +133,8 @@ def write_jsonl(path: Path, records: Iterable) -> int:
 def corpus_docs(chunks: list[CorpusChunk]) -> list[IndexDoc]:
     docs = []
     for chunk in chunks:
+        if chunk.quality is not None and chunk.quality < MIN_CORPUS_QUALITY:
+            continue
         for part in split_chunk(chunk):
             meta = part.model_dump(exclude={"text", "chunk_id"})
             docs.append(IndexDoc(id=part.chunk_id, text=part.text, meta=meta))
@@ -188,25 +196,28 @@ def rubric_docs(kg: KnowledgeGraph, samples: list[ScoredSample]) -> list[IndexDo
             )
         )
     for s in samples:
-        docs.append(
-            IndexDoc(
-                id=s.sample_id,
-                text=s.response_text,
-                meta={
-                    "kind": "sample",
-                    "exam": s.exam,
-                    "skill": s.skill,
-                    "task": s.task,
-                    "prompt_id": s.prompt_id,
-                    "prompt_text": s.prompt_text,
-                    "scores": s.scores,
-                    "overall": s.scores.get("overall"),
-                    "rater": s.rater,
-                    "comments": s.comments,
-                    "source": s.source,
-                },
+        meta = {
+            "kind": "sample",
+            "exam": s.exam,
+            "skill": s.skill,
+            "task": s.task,
+            "prompt_id": s.prompt_id,
+            "prompt_text": s.prompt_text,
+            "scores": s.scores,
+            "overall": s.scores.get("overall"),
+            "rater": s.rater,
+            "comments": s.comments,
+            "source": s.source,
+            "quality": s.quality,
+        }
+        if s.response_text and (s.quality is None or s.quality >= MIN_SAMPLE_QUALITY):
+            docs.append(IndexDoc(id=s.sample_id, text=s.response_text, meta=meta))
+        # Examiner comments explain a band in the examiner's own words; they stay searchable
+        # even when the scanned essay they describe is unreadable.
+        if s.rater == "official" and s.comments:
+            docs.append(
+                IndexDoc(id=f"{s.sample_id}#comment", text=s.comments, meta={**meta, "kind": "examiner_comment"})
             )
-        )
     return docs
 
 
@@ -236,6 +247,8 @@ def save_indexes(indexes: dict[str, HybridIndex], directory: Path) -> dict[str, 
 def multirag_from(
     indexes: dict[str, HybridIndex], kg: KnowledgeGraph | None, glossary: Glossary | None = None
 ) -> MultiRAG:
+    for name, weight in BM25_WEIGHTS.items():
+        indexes[name].bm25_weight = weight
     return MultiRAG(
         corpus=CorpusRetriever(indexes["corpus"], glossary),
         rubric=RubricRetriever(indexes["rubric"], glossary),
