@@ -190,6 +190,7 @@ def import_cambridge(
     books: list[int] = typer.Option(None, "--book", help="Only these book numbers (repeatable)"),
 ) -> None:
     """Parse your own Cambridge IELTS books into local, git-ignored corpus and scoring files."""
+    from .importers.answer_keys import coverage
     from .importers.cambridge import import_books
     from .rag.build import MIN_CORPUS_QUALITY, MIN_SAMPLE_QUALITY
 
@@ -199,6 +200,7 @@ def import_cambridge(
     samples = [x for r in results for x in r.samples]
     n1 = write_jsonl(s.exam_dir / "corpus" / "private" / "cambridge.jsonl", chunks)
     n2 = write_jsonl(s.exam_dir / "scoring" / "private" / "cambridge.jsonl", samples)
+    n3 = write_jsonl(s.exam_dir / "answers" / "private" / "cambridge.jsonl", [k for r in results for k in r.keys])
     for r in results:
         if r.skipped:
             typer.echo(f"  Cambridge {r.book}: skipped, {r.skipped}")
@@ -212,7 +214,108 @@ def import_cambridge(
             + f", scored writing {len(r.samples)} ({readable} readable essays)"
             + (f", {low} low-quality items not indexed" if low else "")
         )
-    typer.echo(f"corpus items: {n1}, examiner-scored writing: {n2}. Run `ielts-tutor build` to re-index.")
+        if r.keys:
+            cov = coverage(r.keys)
+            gaps = {f"{t}-{sk}": 40 - n for (t, sk), n in sorted(cov.items()) if n < 40}
+            typer.echo(f"      answer keys: {sum(1 for n in cov.values() if n == 40)}/{len(cov)} complete sets"
+                       + (f", questions missing {gaps}" if gaps else ""))
+    typer.echo(f"corpus items: {n1}, examiner-scored writing: {n2}, answer keys: {n3}. "
+               "Run `ielts-tutor build` to re-index.")
+
+
+@app.command("import-explanations")
+def import_explanations_cmd(
+    root: Path = typer.Argument(..., help="Folder holding the Cambridge material (explanation PDFs in a 解析 folder)"),
+    books: list[int] = typer.Option(None, "--book", help="Only these book numbers (repeatable)"),
+    workers: int = typer.Option(6, help="Parallel tesseract processes"),
+    all_books: bool = typer.Option(False, "--all", help="Every explanation book, even for tests not imported"),
+) -> None:
+    """OCR the scanned Chinese explanation books and cut them into per-part sections (local, git-ignored).
+
+    By default only books whose answer keys were imported (`import-cambridge`) are processed."""
+    from .grading.store import load_keys
+    from .importers.explanations import import_explanations
+    from .importers.ocr import tesseract_available
+
+    if problem := tesseract_available():
+        raise typer.BadParameter(problem)
+    s = get_settings()
+    if not books and not all_books:
+        books = sorted({k.book for k in load_keys(s.exam_dir)})
+        if not books:
+            raise typer.BadParameter("no answer keys yet: run import-cambridge first, or pass --book / --all")
+        typer.echo(f"books with imported tests: {books}")
+
+    def progress(name: str, done: int, total: int) -> None:
+        if done == total or done % 50 < workers * 4:
+            typer.echo(f"  OCR {name}: {done}/{total} pages")
+
+    records = import_explanations(root, s.index_dir.parent / "cache" / "cambridge_explain", books or None,
+                                  workers, progress)
+    n = write_jsonl(s.exam_dir / "explanations" / "private" / "cambridge.jsonl", records)
+    by_book: dict[int, set] = {}
+    for r in records:
+        by_book.setdefault(r.book, set()).add((r.test, r.skill))
+    for b, sets in sorted(by_book.items()):
+        tests = sorted({t for t, _ in sets})
+        typer.echo(f"  Cambridge {b}: tests {', '.join(tests)}; "
+                   f"{sum(1 for r in records if r.book == b)} sections")
+    typer.echo(f"explanation sections: {n}")
+
+
+@app.command()
+def check(
+    book: int = typer.Argument(..., help="Cambridge book number, e.g. 17"),
+    test: str = typer.Argument(..., help="Test number (1-4, 5-8 for book 12) or A/B for General Training"),
+    skill: str = typer.Argument(..., help="listening | reading"),
+    answers_file: Path = typer.Argument(None, help='Text file: "1 litter" per line, or one answer per line'),
+    answers: str = typer.Option(None, "--answers", "-a", help='Inline answers: "litter, dogs, A, ..."'),
+    explain: bool = typer.Option(True, help="Show the Chinese explanation for each wrong answer"),
+    as_json: bool = typer.Option(False, "--json", help="Print the marking as JSON"),
+) -> None:
+    """Mark your Listening/Reading answers for one Cambridge test and estimate the band."""
+    from dataclasses import asdict
+
+    from .grading.objective import mark, parse_answer_text
+    from .grading.store import keys_for, load_explanations, load_keys
+    from .importers.explanations import find_explanation
+
+    s = get_settings()
+    skill = skill.lower()
+    keys = keys_for(load_keys(s.exam_dir), book, test, skill)
+    if not keys:
+        raise typer.BadParameter(f"no answer keys for Cambridge {book} Test {test} {skill}; run import-cambridge")
+    text = answers if answers is not None else answers_file.read_text(encoding="utf-8") if answers_file else None
+    if text is None:
+        raise typer.BadParameter("give an answers file or --answers")
+    m = mark(keys, parse_answer_text(text))
+    sections = load_explanations(s.exam_dir) if explain else []
+    by_q = {k.question: k for k in keys}
+    out = []
+    for r in m.results:
+        row = asdict(r)
+        if explain and r.correct is False and r.question in by_q:
+            k = by_q[r.question]
+            hit = find_explanation(sections, book, k.test, skill, r.question, k.answers or k.all_of or [])
+            if hit:
+                row["explanation"] = {"section": hit[0].section_id, "pages": hit[0].pages, "text": hit[1]}
+        out.append(row)
+    if as_json:
+        typer.echo(json.dumps({"book": book, "test": m.test, "skill": skill, "raw": m.raw, "keyed": m.keyed,
+                               "band": m.band, "results": out}, ensure_ascii=False, indent=1))
+        return
+    for row in out:
+        mark_ = {True: "✓", False: "✗", None: "?"}[row["correct"]]
+        if row["correct"]:
+            continue
+        typer.echo(f" {mark_} Q{row['question']:<2}  you: {row['given'] or '-':<24} answer: {' / '.join(row['expected']) or '(no key)'}"
+                   + (f"  [{row['note']}]" if row["note"] else ""))
+        if ex := row.get("explanation"):
+            typer.echo(f"      解析 ({ex['section']}, p.{ex['pages'][0]}): " + ex["text"].replace("\n", " "))
+    missing = 40 - m.keyed
+    typer.echo(f"\nCambridge {book} Test {m.test} {skill}: {m.raw}/{m.keyed} correct"
+               + (f" ({missing} questions have no key and are not counted)" if missing else "")
+               + f" -> band {m.band} (estimate)")
 
 
 @app.command("import-scored")

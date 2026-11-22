@@ -11,6 +11,7 @@
 uv sync                      # 核心依赖
 uv sync --extra anthropic    # 使用 Claude；或 --extra openai（OpenAI / Ollama / vLLM）
 uv sync --extra embeddings   # 语义嵌入（默认 BAAI/bge-small-en-v1.5）
+uv sync --extra ocr          # PDF 渲染，给扫描版做 OCR（另需 brew install tesseract tesseract-lang）
 cp .env.example .env         # 填入 API key；.env 中的值优先于 shell 里导出的同名变量
 
 uv run ielts-tutor build                                   # 加载图谱、校验、建三路索引 -> var/
@@ -20,7 +21,9 @@ uv run ielts-tutor eval --show-misses                       # 检索评测：对
 uv run ielts-tutor tag-corpus                              # 用 LLM 给未标注的题目打标签，输出待审核队列
 uv run ielts-tutor import-scored essays.csv --text-col Essay --overall-col Overall --name kaggle
 uv run ielts-tutor import-ielts-org                        # 下载 ielts.org 免费官方样题与考官评分作文
-uv run ielts-tutor import-cambridge "data/ielts/剑4-20真题+解析+音频"   # 解析你自己的剑桥真题 PDF + 音频
+uv run ielts-tutor import-cambridge "data/ielts/剑4-20真题+解析+音频"   # 解析你自己的剑桥真题 PDF + 音频 + 答案
+uv run ielts-tutor import-explanations "data/ielts/剑4-20真题+解析+音频" # OCR 中文解析书并按套题切分
+uv run ielts-tutor check 17 1 listening my_answers.txt      # 判分 + 分数段估算 + 错题解析
 uv run pytest
 ```
 
@@ -34,9 +37,12 @@ uv run pytest
 | `data/ielts/eval/retrieval_queries.yaml` | 检索评测集（40 条，含 3 条中文） |
 | `data/ielts/scoring/*.jsonl` | 评分 RAG 的已评分样本（`ScoredSample`），用 `import-scored` 生成 |
 | `data/ielts/corpus/private/`、`data/ielts/scoring/private/` | 有版权的官方材料（ielts.org 样题、剑桥真题），只在本地，不进 git |
+| `data/ielts/answers/private/`、`data/ielts/explanations/private/` | 剑桥听力/阅读答案、中文解析分段（同样只在本地） |
 | `src/ielts_tutor/kg/` | 图谱 schema（边的类型约束）、YAML 加载与校验、NetworkX 存储、导出 Cypher（Neo4j）、LLM 打标签 |
 | `src/ielts_tutor/rag/` | 嵌入、BM25 + 向量混合索引、三路检索器、RRF 融合、建索引 |
 | `src/ielts_tutor/llm/` | 可切换 LLM：Anthropic SDK / OpenAI 兼容接口 / 测试用 Fake |
+| `src/ielts_tutor/importers/` | 各数据源导入：剑桥真题、答案页、中文解析 OCR、ielts.org |
+| `src/ielts_tutor/grading/` | 客观题判分（答案匹配、原始分换算分数段）；写作/口语评分在后续里程碑 |
 
 ## 检索方案与评测
 
@@ -68,3 +74,22 @@ uv run pytest
 - 每条记录有 `quality`（能识别的英文单词占比）。低于 0.85 的语料不进索引，以免乱码污染检索。
 - 旧版（剑4–13）的考生作文是手写稿扫描，OCR 结果基本不可读（quality 0.2–0.8），这些作文只把**考官评语**放进索引（`kind: examiner_comment`，用 `RubricRetriever.examiner_comments()` 检索），不参与相似作文检索；剑17 的作文是排版文字，作文和评语都可用。
 - PDF 文字缓存在 `var/cache/cambridge/`，重跑很快。
+
+## 听力/阅读判分（`check`）
+
+`import-cambridge` 会同时提取书后的听力和阅读答案。旧书的答案页是两三栏排版，文字层本身也是 OCR，所以要用单词坐标重建分栏，把题号和答案配对；文字层乱码或有题缺失时，再用 tesseract 重新识别这些页，两种结果按题合并。题号被 OCR 认错的（如 37 认成 31），按前后题号修正；题号丢失的，按行距推断。
+
+答案写法保持原样：`(the/a) pianist/piano player` 表示括号里的词可写可不写，`/` 分隔多个可接受答案；"IN EITHER ORDER" 的题组不计顺序；"BOTH REQUIRED FOR ONE MARK" 要求同时答出所有词。原始分按 IELTS 公布的参考换算表换成分数段（各套题略有差异，所以是估算）。
+
+答案文件可以每行写成 `1 litter` 的形式，也可以每行只写答案、按顺序排列，或者用 `--answers "litter, dogs, A"` 直接写在命令里。加 `--json` 输出结构化结果，供后续 Agent 使用。
+
+剑4–13、17 共提取约 3,660 题，剑17 全部完整，旧书约 2.5% 的题仍然缺失（主要是剑10 和扫描质量差的几页）。缺答案的题判分时会标出来、不计分，分数段按已有题目等比换算。要补录或修正答案，可以在 `data/ielts/answers/private/` 下放一个 `manual.jsonl`（每行一个 `AnswerKey`）：同一道题以文件名排序靠后的为准，`manual.jsonl` 排在 `cambridge.jsonl` 之后，所以会覆盖自动提取的结果。
+
+## 中文解析（`import-explanations`）
+
+`【解析】` 文件夹里的解析书都是扫描版。先用 tesseract（chi_sim+eng，300dpi）逐页 OCR，结果缓存在 `var/cache/cambridge_explain/`，中断后可以接着跑；全部 OCR 一遍约 3,000 页，8 核大约 1 小时。然后按"听力 Section/Part 1–4 → 阅读 Passage 1–3 → 写作 Task 1–2 → 口语 Part 1–3"的固定顺序切分：
+- 一旦出现阶段倒退（比如口语之后又出现 Part 1），就认为进入了下一套题。
+- 新版书的页眉（如 "Test 1 Reading"）优先采用。
+- 学术类之后、没有 Reading Passage 的套题，按 General Training A/B 处理。
+
+判错时，在对应套题、技能和 Part 的解析里，找写有题号或正确答案（"答案为 …"）的那一段。听力约 75%、阅读约 70% 的题能找到解析。解析是中文，英文嵌入模型用不上，所以不进检索索引，只按书、套题和题号直接查。

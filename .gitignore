@@ -8,6 +8,8 @@ var/
 data/ielts/scoring/
 data/ielts/holdout/
 data/ielts/corpus/private/
+# Any private/ folder holds copyrighted material: answer keys, explanation sections, ...
+data/*/*/private/
 
 # Cambridge IELTS books, audio and explanations (copyrighted, local only)
 data/ielts/剑4-20真题+解析+音频/

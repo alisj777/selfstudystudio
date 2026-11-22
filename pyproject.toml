@@ -27,6 +27,10 @@ data = [
     "pyarrow>=26.0.1",
     "pypdf>=7.1.0",
 ]
+ocr = [
+    # 1.27+ pulls onnxruntime, which has no macOS 13 wheels
+    "pymupdf>=1.24,<1.27",
+]
 
 [project.scripts]
 ielts-tutor = "ielts_tutor.cli:app"

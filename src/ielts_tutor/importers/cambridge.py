@@ -5,6 +5,7 @@ git-ignored folders and kept for local, internal use:
   data/<exam>/corpus/private/cambridge.jsonl    writing and speaking prompts, reading passages,
                                                 listening audioscripts, examiner model answers
   data/<exam>/scoring/private/cambridge.jsonl   candidate writing with the examiner's band and comment
+  data/<exam>/answers/private/cambridge.jsonl   Listening and Reading answer keys (see answer_keys.py)
 
 Only PDFs with a text layer are parsed. Scanned books (no text layer) are reported so
 they can be OCR'd first. Every item carries `quality`, the share of recognisable English
@@ -21,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..rag.schema import CorpusChunk, ScoredSample
+from .answer_keys import AnswerKey, extract_keys
 from .ielts_org import _clean
 from .textquality import Vocab
 
@@ -153,6 +155,8 @@ class ParsedBook:
     book: int
     items: list[_Item]
     sample_text: list[tuple[int, str]]  # (page, line) in the sample-answers section
+    key_text: list[tuple[int, str]] = field(default_factory=list)  # (page, line) in the answer keys
+    base: int = 1  # number of the first Academic test (5 in book 12)
 
 
 def _test_module(t: int | str) -> str:
@@ -162,6 +166,7 @@ def _test_module(t: int | str) -> str:
 def parse_book(pages: list[str], book: int) -> ParsedBook:
     items: list[_Item] = []
     sample_lines: list[tuple[int, str]] = []
+    key_lines: list[tuple[int, str]] = []
     cur: _Item | None = None
     test: int | str = 0
     zone = "front"
@@ -260,6 +265,8 @@ def parse_book(pages: list[str], book: int) -> ParsedBook:
                     cur.lines.append(line)
             elif zone == "samples":
                 sample_lines.append((pno, line))
+            elif zone == "keys":
+                key_lines.append((pno, line))
     close()
 
     # Transcripts numbered by counting start from 1; shift them for books numbered 5-8.
@@ -267,7 +274,7 @@ def parse_book(pages: list[str], book: int) -> ParsedBook:
         for i in items:
             if i.kind == "transcript" and isinstance(i.test, int) and i.test and i.test < base:
                 i.test += base - 1
-    return ParsedBook(book, items, sample_lines)
+    return ParsedBook(book, items, sample_lines, key_lines, base)
 
 
 def _body(lines: list[str], vocab: Vocab) -> str:
@@ -413,6 +420,7 @@ class BookResult:
     path: Path
     chunks: list[CorpusChunk] = field(default_factory=list)
     samples: list[ScoredSample] = field(default_factory=list)
+    keys: list[AnswerKey] = field(default_factory=list)
     skipped: str | None = None
 
 
@@ -568,7 +576,9 @@ def find_books(root: Path) -> dict[int, Path]:
     return books
 
 
-def import_books(root: Path, cache_dir: Path | None = None, books: list[int] | None = None) -> list[BookResult]:
+def import_books(
+    root: Path, cache_dir: Path | None = None, books: list[int] | None = None, keys: bool = True
+) -> list[BookResult]:
     vocab = Vocab.load()
     audio = audio_manifest(root)
     results = []
@@ -579,5 +589,10 @@ def import_books(root: Path, cache_dir: Path | None = None, books: list[int] | N
         if not has_text_layer(pages):
             results.append(BookResult(n, path, skipped="scanned PDF without a text layer (needs OCR)"))
             continue
-        results.append(convert(parse_book(pages, n), vocab, audio, path))
+        parsed = parse_book(pages, n)
+        res = convert(parsed, vocab, audio, path)
+        key_pages = sorted({p for p, _ in parsed.key_text})
+        if keys and key_pages:
+            res.keys = extract_keys(path, key_pages, n, parsed.base)
+        results.append(res)
     return results
