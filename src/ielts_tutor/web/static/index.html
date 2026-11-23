@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>雅思写作练习</title>
+<title>雅思自学练习</title>
 <style>
 :root {
   --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e3e1da;
@@ -46,14 +46,37 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
 .item { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; }
 .item .ev { color: var(--muted); font-size: 12px; }
 .trace { color: var(--muted); font-size: 12px; }
-.hidden { display: none; }
+.hidden { display: none !important; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 12px 0 18px; }
+.tabs button { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tabs .status { margin-left: auto; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+.pages img { width: 100%; height: auto; display: block; border: 1px solid var(--line); margin-bottom: 12px; background: #fff; }
+.answers { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.grid label { flex-direction: row; align-items: center; gap: 6px; color: var(--ink); }
+.grid label span { width: 22px; text-align: right; color: var(--muted); font-size: 12px; }
+.grid input { width: 100%; min-width: 0; padding: 4px 6px; }
+audio { width: 100%; }
+.ok { color: var(--good); }
 .status { color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>雅思写作练习</h1>
-  <p class="sub">出题 → 作答 → 评分 → 反馈。分数来自评分模型、相似作文和 LLM 考官的融合，每条反馈都附有依据。</p>
+  <h1>雅思自学练习</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="writing" class="on">写作</button>
+    <button data-tab="listening">听力</button>
+    <button data-tab="reading">阅读</button>
+    <button data-tab="speaking">口语</button>
+    <span class="status" id="profile"></span>
+  </nav>
+
+  <div id="pane-writing">
+  <p class="sub">出题 → 作答 → 评分 → 反馈。分数由评分模型和 LLM 考官各占一半，每条反馈都附有依据。</p>
 
   <section class="card" id="setup">
     <h2>1. 选题</h2>
@@ -104,6 +127,40 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
     <p class="trace" id="trace"></p>
     <button class="ghost" id="againBtn">再练一题</button>
   </section>
+  </div>
+
+  <div id="pane-practice" class="hidden">
+    <section class="card">
+      <div class="row">
+        <label>套题<select id="ptest"></select></label>
+        <button id="pstart">开始</button>
+        <span class="status" id="pinfo"></span>
+      </div>
+    </section>
+    <div id="pwork" class="hidden">
+      <section class="card" id="paudio"></section>
+      <div class="split">
+        <section class="card pages" id="ppages"></section>
+        <section class="card answers">
+          <div class="row" style="justify-content:space-between"><h2>答题卡</h2><span class="status">用时 <span id="ptimer">0:00</span></span></div>
+          <div class="grid" id="pgrid"></div>
+          <button id="psubmit" style="margin-top:12px;width:100%">交卷判分</button>
+          <p class="status" id="pstatus"></p>
+        </section>
+      </div>
+    </div>
+    <section class="card hidden" id="presult">
+      <div class="row" style="align-items:center;gap:24px">
+        <div><div class="status">分数段（估算）</div><div class="band" id="pband"></div></div>
+        <div id="praw"></div>
+      </div>
+      <div class="scroll" style="margin-top:14px"><table id="ptable"></table></div>
+    </section>
+  </div>
+
+  <div id="pane-speaking" class="hidden">
+    <section class="card"><p class="status">口语练习正在开发中。</p></section>
+  </div>
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -169,7 +226,7 @@ $("submitBtn").onclick = async () => {
   $("submitBtn").disabled = true; $("submitStatus").textContent = "评分中：分析 → 评分 → 反馈，大约需要 1 分钟…";
   try {
     const s = await api(`/api/sessions/${session.session_id}/submit`, {text: $("essay").value, seconds: Math.floor((Date.now() - t0) / 1000)});
-    clearInterval(tick); render(s); $("submitStatus").textContent = "";
+    clearInterval(tick); render(s); $("submitStatus").textContent = ""; refreshProfile();
   } catch (e) { $("submitStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
   $("submitBtn").disabled = false;
 };
@@ -199,7 +256,74 @@ function render(s) {
   ["resultCard", "feedbackCard"].forEach(id => $(id).classList.remove("hidden"));
   $("resultCard").scrollIntoView({behavior: "smooth"});
 }
-init().catch(e => { $("setupStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; });
+// ---------------------------------------------------------------- tabs
+let tests = [], ptest = null, pt0 = null, ptick = null, current = "writing";
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function showTab(tab) {
+  current = tab;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  $("pane-writing").classList.toggle("hidden", tab !== "writing");
+  $("pane-practice").classList.toggle("hidden", !["listening", "reading"].includes(tab));
+  $("pane-speaking").classList.toggle("hidden", tab !== "speaking");
+  if (tab === "listening" || tab === "reading") loadTests();
+}
+const learnerId = () => $("learner").value || "default";
+async function refreshProfile() {
+  try {
+    const p = await api(`/api/learners/${encodeURIComponent(learnerId())}`);
+    const names = {writing: "写作", listening: "听力", reading: "阅读", speaking: "口语"};
+    $("profile").textContent = Object.entries(p.skills || {}).map(([k, v]) => `${names[k] || k} ${v.recent_band}`).join(" · ");
+  } catch (e) {}
+}
+
+// ---------------------------------------------------------------- listening / reading
+async function loadTests() {
+  tests = await api(`/api/practice/tests?learner=${encodeURIComponent(learnerId())}`);
+  const mine = tests.filter(t => t.skill === current);
+  $("ptest").innerHTML = mine.length ? mine.map(t => `<option value="${t.test_id}">剑${t.book} Test ${t.test}${t.done != null ? `（已做 ${t.done}）` : ""}${t.keys < 40 ? `（缺 ${40 - t.keys} 题答案）` : ""}</option>`).join("")
+    : "<option value=''>没有可用的套题：先运行 import-cambridge</option>";
+  $("pinfo").textContent = current === "listening" ? "4 段录音，约 30 分钟" : "3 篇文章，60 分钟";
+}
+$("pstart").onclick = () => {
+  const t = tests.find(x => x.test_id === $("ptest").value);
+  if (!t) return;
+  ptest = t;
+  $("paudio").classList.toggle("hidden", t.skill !== "listening");
+  $("paudio").innerHTML = t.audio_parts.map(p => `<div class="status">Part ${p}</div><audio controls preload="none" src="/api/practice/${t.test_id}/audio/${p}"></audio>`).join("");
+  $("ppages").innerHTML = Array.from({length: t.pages}, (_, i) => `<img loading="lazy" alt="第 ${i + 1} 页" src="/api/practice/${t.test_id}/page/${i}">`).join("");
+  $("pgrid").innerHTML = Array.from({length: 40}, (_, i) => `<label><span>${i + 1}</span><input data-q="${i + 1}" autocomplete="off" spellcheck="false"></label>`).join("");
+  $("pwork").classList.remove("hidden"); $("presult").classList.add("hidden"); $("pstatus").textContent = "";
+  pt0 = Date.now(); clearInterval(ptick);
+  ptick = setInterval(() => { const s = Math.floor((Date.now() - pt0) / 1000); $("ptimer").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }, 1000);
+};
+$("psubmit").onclick = async () => {
+  if (!ptest) return;
+  const answers = {};
+  document.querySelectorAll("#pgrid input").forEach(i => { if (i.value.trim()) answers[i.dataset.q] = i.value.trim(); });
+  $("psubmit").disabled = true; $("pstatus").textContent = "判分中…";
+  try {
+    const r = await api(`/api/practice/${ptest.test_id}/submit`, {learner: learnerId(), answers, seconds: Math.floor((Date.now() - pt0) / 1000)});
+    clearInterval(ptick); renderPractice(r); $("pstatus").textContent = ""; refreshProfile();
+  } catch (e) { $("pstatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  $("psubmit").disabled = false;
+};
+function renderPractice(r) {
+  $("pband").textContent = r.band.toFixed(1);
+  $("praw").innerHTML = `${r.raw} / ${r.keyed} 题正确` + (r.keyed < 40 ? `<div class="status">${40 - r.keyed} 题缺答案，未计分；分数段按比例换算</div>` : "");
+  document.querySelectorAll("#pgrid input").forEach(i => {
+    const row = r.results.find(x => x.question === Number(i.dataset.q));
+    i.style.borderColor = row && row.correct ? "var(--good)" : row && row.correct === false ? "var(--bad)" : "";
+  });
+  $("ptable").innerHTML = "<tr><th>题</th><th>你的答案</th><th>正确答案</th><th></th><th>解析</th></tr>" + r.results.map(x =>
+    `<tr><td>${x.question}</td><td>${esc(x.given) || "–"}</td><td>${esc(x.expected.join(" / ")) || "（缺答案）"}</td>` +
+    `<td class="${x.correct ? "ok" : x.correct === false ? "err" : ""}">${x.correct ? "✓" : x.correct === false ? "✗" : "?"}</td>` +
+    `<td>${x.explanation ? esc(x.explanation.text) + `<div class="trace">${esc(x.explanation.section)} · 解析书第 ${x.explanation.pages[0]} 页</div>` : (x.note ? `<span class="trace">${esc(x.note)}</span>` : "")}</td></tr>`).join("");
+  $("presult").classList.remove("hidden");
+  $("presult").scrollIntoView({behavior: "smooth"});
+}
+$("learner").onchange = refreshProfile;
+
+init().then(refreshProfile).catch(e => { $("setupStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; });
 </script>
 </body>
 </html>

@@ -201,6 +201,7 @@ def import_cambridge(
     n1 = write_jsonl(s.exam_dir / "corpus" / "private" / "cambridge.jsonl", chunks)
     n2 = write_jsonl(s.exam_dir / "scoring" / "private" / "cambridge.jsonl", samples)
     n3 = write_jsonl(s.exam_dir / "answers" / "private" / "cambridge.jsonl", [k for r in results for k in r.keys])
+    n4 = write_jsonl(s.exam_dir / "tests" / "private" / "cambridge.jsonl", [t for r in results for t in r.tests])
     for r in results:
         if r.skipped:
             typer.echo(f"  Cambridge {r.book}: skipped, {r.skipped}")
@@ -219,7 +220,7 @@ def import_cambridge(
             gaps = {f"{t}-{sk}": 40 - n for (t, sk), n in sorted(cov.items()) if n < 40}
             typer.echo(f"      answer keys: {sum(1 for n in cov.values() if n == 40)}/{len(cov)} complete sets"
                        + (f", questions missing {gaps}" if gaps else ""))
-    typer.echo(f"corpus items: {n1}, examiner-scored writing: {n2}, answer keys: {n3}. "
+    typer.echo(f"corpus items: {n1}, examiner-scored writing: {n2}, answer keys: {n3}, practice tests: {n4}. "
                "Run `ielts-tutor build` to re-index.")
 
 

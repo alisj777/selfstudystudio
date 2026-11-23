@@ -29,7 +29,7 @@ uv run ielts-tutor train-scorer                             # 训练写作评分
 uv run ielts-tutor eval-scorer [--llm 150]                  # 测试集评估；--llm 时拟合融合权重（花 API 费用）
 uv run ielts-tutor write start --topic "online education"   # 出题（--source generate 用 LLM 出新题）
 uv run ielts-tutor write submit <session_id> essay.txt      # 评分 + 反馈（--no-llm 只用模型）
-uv run ielts-tutor serve                                    # 网页版：http://127.0.0.1:8000
+uv run ielts-tutor serve                                    # 网页版：http://127.0.0.1:8000（写作 / 听力 / 阅读）
 uv run pytest
 ```
 
@@ -93,6 +93,10 @@ uv run pytest
 答案文件可以每行写成 `1 litter` 的形式，也可以每行只写答案、按顺序排列，或者用 `--answers "litter, dogs, A"` 直接写在命令里。加 `--json` 输出结构化结果，供后续 Agent 使用。
 
 剑4–13、17 共提取约 3,660 题，剑17 全部完整，旧书约 2.5% 的题仍然缺失（主要是剑10 和扫描质量差的几页）。缺答案的题判分时会标出来、不计分，分数段按已有题目等比换算。要补录或修正答案，可以在 `data/ielts/answers/private/` 下放一个 `manual.jsonl`（每行一个 `AnswerKey`）：同一道题以文件名排序靠后的为准，`manual.jsonl` 排在 `cambridge.jsonl` 之后，所以会覆盖自动提取的结果。
+
+### 网页上的听力和阅读练习
+
+`import-cambridge` 还会记录每套学术类题目的听力、阅读各在 PDF 的哪几页，以及听力 4 段音频，写入 `data/ielts/tests/private/cambridge.jsonl`（剑4–13、17 共 88 组）。网页的"听力 / 阅读"页直接显示书页原图（表格、地图、流程图都保留），听力可以播放各段音频，填完 40 个答题框交卷后，逐题显示对错和中文解析，分数段记入学生档案，和写作成绩一起显示在页面右上角。服务端只读取清单里登记过的文件。General Training 的阅读还没有页码清单，暂时只能在命令行 `check`。
 
 ## 中文解析（`import-explanations`）
 

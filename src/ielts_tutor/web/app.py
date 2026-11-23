@@ -25,7 +25,13 @@ class SubmitRequest(BaseModel):
     seconds: int | None = None
 
 
-def create_app(use_llm: bool = True, tutor=None) -> FastAPI:
+class AnswersRequest(BaseModel):
+    learner: str = "default"
+    answers: dict[int, str]
+    seconds: int | None = None
+
+
+def create_app(use_llm: bool = True, tutor=None, practice=None) -> FastAPI:
     from ..agents.learner import load_learner, summary
     from ..agents.toolkit import load_session
 
@@ -37,7 +43,12 @@ def create_app(use_llm: bool = True, tutor=None) -> FastAPI:
         # The first search builds the keyword indexes (~25 s); pay that at startup, not on a student's essay.
         tutor.tk.rag.rubric.examiner_comments("warm up", 1)
         tutor.tk.rag.corpus.retrieve("warm up", 1)
-    app = FastAPI(title="IELTS writing tutor")
+    if practice is None:
+        from ..grading.practice import PracticeService
+
+        st = tutor.tk.settings
+        practice = PracticeService(st.exam_dir, st.index_dir.parent)
+    app = FastAPI(title="IELTS tutor")
     dirs = tutor.tk.data
 
     @app.get("/")
@@ -85,5 +96,32 @@ def create_app(use_llm: bool = True, tutor=None) -> FastAPI:
     @app.get("/api/learners/{learner_id}")
     def learner(learner_id: str):
         return summary(load_learner(learner_id, dirs["learners"]))
+
+    # ---- Listening and Reading practice (Cambridge books)
+    @app.get("/api/practice/tests")
+    def practice_tests(learner: str = "default"):
+        return practice.catalogue(learner)
+
+    @app.get("/api/practice/{test_id}/page/{index}")
+    def practice_page(test_id: str, index: int):
+        try:
+            return FileResponse(practice.page_png(test_id, index), media_type="image/png")
+        except (KeyError, IndexError) as exc:
+            raise HTTPException(404, "no such page") from exc
+
+    @app.get("/api/practice/{test_id}/audio/{part}")
+    def practice_audio(test_id: str, part: int):
+        try:
+            path = practice.audio_file(test_id, part)
+        except KeyError as exc:
+            raise HTTPException(404, "no such audio") from exc
+        return FileResponse(path, media_type="audio/mpeg")
+
+    @app.post("/api/practice/{test_id}/submit")
+    def practice_submit(test_id: str, req: AnswersRequest):
+        try:
+            return practice.mark(test_id, req.answers, req.learner, req.seconds)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
 
     return app

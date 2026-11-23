@@ -6,6 +6,7 @@ git-ignored folders and kept for local, internal use:
                                                 listening audioscripts, examiner model answers
   data/<exam>/scoring/private/cambridge.jsonl   candidate writing with the examiner's band and comment
   data/<exam>/answers/private/cambridge.jsonl   Listening and Reading answer keys (see answer_keys.py)
+  data/<exam>/tests/private/cambridge.jsonl     where each Listening/Reading test is in the PDF, plus its audio
 
 Only PDFs with a text layer are parsed. Scanned books (no text layer) are reported so
 they can be OCR'd first. Every item carries `quality`, the share of recognisable English
@@ -20,6 +21,8 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from pydantic import BaseModel
 
 from ..rag.schema import CorpusChunk, ScoredSample
 from .answer_keys import AnswerKey, extract_keys
@@ -392,6 +395,46 @@ def _split_comment_first(rest: str, vocab: Vocab) -> tuple[str, str]:
     return "\n".join(lines), ""  # essay could not be told apart: keep the comment, drop the essay
 
 
+# ---------------------------------------------------------------- practice tests
+class PracticeTest(BaseModel):
+    """Where one Listening or Reading test sits in the book, for showing it page by page."""
+
+    test_id: str  # cam17-t1-listening
+    book: int
+    test: str
+    skill: str  # listening | reading
+    pdf: str
+    pages: list[int]  # 1-based PDF pages holding the questions (and passages)
+    audio: dict[int, str] = {}  # listening part -> mp3
+
+
+_RE_LISTEN_HEAD = re.compile(r"(?im)^\s*(?:SECTION|PART)\s*([1-4Il])\b[^\n]*(?:Questions|\n\s*Questions)")
+
+
+def practice_tests(parsed: ParsedBook, pages: list[str], path: Path, audio: dict) -> list[PracticeTest]:
+    """Academic tests only: Listening runs from its first section heading up to Reading Passage 1,
+    Reading from Passage 1 up to Writing Task 1."""
+    first = {(i.kind, i.test, i.n): i.page for i in parsed.items}
+    out = []
+    for t in sorted(t for (k, t, n) in first if k == "reading" and n == 1 and isinstance(t, int)):
+        r1, w1 = first[("reading", t, 1)], first.get(("writing", t, 1))
+        if w1 and w1 > r1:
+            out.append(PracticeTest(test_id=f"cam{parsed.book}-t{t}-reading", book=parsed.book, test=str(t),
+                                    skill="reading", pdf=str(path), pages=list(range(r1, w1))))
+        heads = [(pg, m.group(1)) for pg in range(max(1, r1 - 14), r1)
+                 if (m := _RE_LISTEN_HEAD.search(pages[pg - 1]))]
+        if not heads:
+            continue
+        start, n = heads[0]
+        if _num(n) != 1 and start > 1:
+            start -= 1  # the Section 1 page was not recognised (or is missing from the PDF)
+        out.append(PracticeTest(test_id=f"cam{parsed.book}-t{t}-listening", book=parsed.book, test=str(t),
+                                skill="listening", pdf=str(path), pages=list(range(start, r1)),
+                                audio={part: str(audio[(parsed.book, t, part)]) for part in range(1, 5)
+                                       if (parsed.book, t, part) in audio}))
+    return out
+
+
 # ---------------------------------------------------------------- audio
 def audio_manifest(audio_root: Path) -> dict[tuple[int, int, int], Path]:
     """(book, test, part) -> mp3, from folder names like 剑13 and file names like Test1.Section2."""
@@ -421,6 +464,7 @@ class BookResult:
     chunks: list[CorpusChunk] = field(default_factory=list)
     samples: list[ScoredSample] = field(default_factory=list)
     keys: list[AnswerKey] = field(default_factory=list)
+    tests: list[PracticeTest] = field(default_factory=list)
     skipped: str | None = None
 
 
@@ -591,6 +635,7 @@ def import_books(
             continue
         parsed = parse_book(pages, n)
         res = convert(parsed, vocab, audio, path)
+        res.tests = practice_tests(parsed, pages, path, audio)
         key_pages = sorted({p for p, _ in parsed.key_text})
         if keys and key_pages:
             res.keys = extract_keys(path, key_pages, n, parsed.base)

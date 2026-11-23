@@ -63,8 +63,16 @@ def save_learner(profile: LearnerProfile, directory: Path) -> None:
 
 
 def summary(profile: LearnerProfile) -> dict:
+    """Band estimate per skill (mean of the last three attempts), criteria and weak grammar points."""
+    skills: dict[str, list[float]] = {}
+    for h in profile.history:
+        skill = h.get("task", "")
+        skill = "writing" if skill.startswith("task") else "speaking" if skill.startswith("part") else skill
+        if h.get("overall") is not None:
+            skills.setdefault(skill, []).append(h["overall"])
     crit = {k.rsplit(".", 1)[1]: round(v.value * 9, 1) for k, v in profile.mastery.items() if k.startswith("crit.")}
     weak = sorted(((k, v.value) for k, v in profile.mastery.items() if k.startswith("gp.")), key=lambda x: x[1])[:5]
-    return {"attempts": len(profile.history), "criteria_band_estimate": crit,
-            "weak_grammar": [k for k, _ in weak], "last": profile.history[-3:]}
-
+    return {"attempts": len(profile.history),
+            "skills": {k: {"attempts": len(v), "recent_band": round(sum(v[-3:]) / len(v[-3:]) * 2) / 2}
+                       for k, v in skills.items()},
+            "criteria_band_estimate": crit, "weak_grammar": [k for k, _ in weak], "last": profile.history[-3:]}
