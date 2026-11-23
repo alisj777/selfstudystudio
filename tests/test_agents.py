@@ -155,3 +155,16 @@ def test_web_api_runs_a_session(tmp_path, kg, rag, scorer_parts):
     assert client.post(f"/api/sessions/{s['session_id']}/submit", json={"text": ESSAY}).status_code == 409
     assert client.get("/api/learners/web").json()["attempts"] == 1
     assert client.get("/api/sessions/nope").status_code == 404
+
+
+def test_default_fusion_is_half_model_half_llm(tmp_path, kg, rag, scorer_parts):
+    from ielts_tutor.agents.scorer import fusion_weights
+    from ielts_tutor.writing.scorer import round_half
+
+    tutor = _tutor(tmp_path, kg, rag, scorer_parts)
+    assert fusion_weights(tutor.tk, "TR", "task2", True) == (0.5, 0.0, 0.5)
+    assert fusion_weights(tutor.tk, "TR", "task2", False) == (1.0, 0.0, 0.0)
+    assert fusion_weights(tutor.tk, "TA", "task1", True) == (0.0, 0.0, 1.0)
+    s = tutor.submit(tutor.start(question="Discuss online learning.").session_id, ESSAY)
+    for c in s.score.criteria.values():
+        assert c.band == round_half(0.5 * c.model + 0.5 * c.llm)

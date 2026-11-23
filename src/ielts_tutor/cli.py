@@ -386,6 +386,7 @@ def train_scorer(regressor: str = typer.Option("gbr", help="gbr (gradient boosti
 @app.command("eval-scorer")
 def eval_scorer(
     llm: int = typer.Option(0, "--llm", help="Also run the LLM judge on this many held-out essays (costs API calls)"),
+    apply_weights: bool = typer.Option(False, help="Use the fitted fusion weights instead of the 0.5/0.5 default"),
 ) -> None:
     """Evaluate the score model on the held-out essays; with --llm, fit the model/kNN/LLM fusion weights."""
     from .rag.build import load_jsonl
@@ -419,9 +420,12 @@ def eval_scorer(
         for c, d in rep["with_llm"].items():
             typer.echo(f"  {c}: model+knn QWK {d['model+knn']['qwk']}, LLM {d['llm']['qwk']}, "
                        f"fused (2-fold) {d['fused (2-fold)']['qwk']}  weights {d['weights']}")
-        path = models / "fusion.json"
-        path.write_text(json.dumps({"task2": rep["weights"]}, indent=1))
-        typer.echo(f"fusion weights -> {path}")
+        fitted = models / "fusion_fitted.json"
+        fitted.write_text(json.dumps({"task2": rep["weights"]}, indent=1))
+        typer.echo(f"fitted fusion weights -> {fitted} (reference only)")
+        if apply_weights:
+            (models / "fusion.json").write_text(fitted.read_text())
+            typer.echo(f"applied -> {models / 'fusion.json'}")
     if llm:
         from .rag.build import load_samples
         from .writing.evaluate import official_check

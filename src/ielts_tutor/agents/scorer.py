@@ -1,6 +1,11 @@
 """Scorer: model + k-NN + LLM judge, fused per criterion, with review (design doc 5.3 / 6.1).
 
-  band_c = w_model * model_c + w_kNN * kNN_c + w_LLM * LLM_c   (weights fitted by stacking)
+  band_c = w_model * model_c + w_kNN * kNN_c + w_LLM * LLM_c
+
+Default weights (Task 2): model 0.5, LLM 0.5, k-NN 0. Weights fitted on the btnotpt labels
+gave the LLM almost no weight, but those labels look machine-made, while against real
+examiners' bands the LLM did no worse than the model (README, M2). Fitted weights are only
+used if written to var/models/fusion.json (eval-scorer --llm N --apply-weights).
 
 If the LLM and the model disagree by more than REVIEW_GAP on any criterion, the scorer asks
 the analyzer for a closer look once (session.next = "analyze"); if they still disagree the
@@ -18,7 +23,7 @@ from .state import CriterionScore, ScoreCard, Session
 from .toolkit import Toolkit, agent
 
 REVIEW_GAP = 1.0
-DEFAULT_LLM_WEIGHT = 0.3  # until fusion weights are fitted with the LLM (eval-scorer --llm)
+DEFAULT_WEIGHTS = (0.5, 0.0, 0.5)  # model, k-NN, LLM (chosen 2026-11-23, see module docstring)
 
 
 def _criteria(task: str) -> list[str]:
@@ -31,12 +36,11 @@ def fusion_weights(tk: Toolkit, criterion: str, task: str, has_llm: bool) -> tup
         fitted = json.loads(path.read_text()).get(task, {}).get(criterion)
         if fitted and (has_llm or fitted[2] == 0):
             return tuple(fitted)  # type: ignore[return-value]
-    if task == "task1":
+    if task == "task1":  # no trained Task 1 model yet
         return (0.0, 0.0, 1.0) if has_llm else (1.0, 0.0, 0.0)
-    wm, wk, _ = getattr(tk.scorer, "weights", {}).get("TR" if criterion == "TA" else criterion, (0.5, 0.5, 0.0))
     if not has_llm:
-        return wm, wk, 0.0
-    return wm * (1 - DEFAULT_LLM_WEIGHT), wk * (1 - DEFAULT_LLM_WEIGHT), DEFAULT_LLM_WEIGHT
+        return (1.0, 0.0, 0.0)
+    return DEFAULT_WEIGHTS
 
 
 def _notes(session: Session) -> str:
