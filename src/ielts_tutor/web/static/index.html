@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>雅思写作练习</title>
+<style>
+:root {
+  --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e3e1da;
+  --accent: #2f5d8a; --accent-ink: #ffffff; --good: #2e7d4f; --warn: #a15c00; --bad: #b3261e;
+  --mark: #fde7a9; --mark-ink: #1d1d1b;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161615; --card: #20201e; --ink: #ecebe6; --muted: #a3a29c; --line: #34332f;
+          --accent: #7fb0e0; --accent-ink: #10161c; --good: #6cc495; --warn: #e0a85a; --bad: #f08a80;
+          --mark: #5a4a14; --mark-ink: #fff4d6; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+       font: 15px/1.6 -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
+main { max-width: 920px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+select, input, textarea { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+       border-radius: 6px; padding: 7px 9px; }
+textarea { width: 100%; min-height: 360px; resize: vertical; line-height: 1.7; }
+button { font: inherit; border: 0; border-radius: 6px; padding: 8px 16px; background: var(--accent);
+       color: var(--accent-ink); cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+.prompt { white-space: pre-wrap; font-size: 16px; }
+.meta { color: var(--muted); font-size: 13px; display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.scroll { overflow-x: auto; }
+.band { font-size: 40px; font-weight: 700; line-height: 1; }
+.pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.warn { color: var(--warn); }
+.err { color: var(--bad); }
+mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 2px; }
+.essay { white-space: pre-wrap; line-height: 1.8; }
+.item { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; }
+.item .ev { color: var(--muted); font-size: 12px; }
+.trace { color: var(--muted); font-size: 12px; }
+.hidden { display: none; }
+.status { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>雅思写作练习</h1>
+  <p class="sub">出题 → 作答 → 评分 → 反馈。分数来自评分模型、相似作文和 LLM 考官的融合，每条反馈都附有依据。</p>
+
+  <section class="card" id="setup">
+    <h2>1. 选题</h2>
+    <div class="row">
+      <label>任务<select id="task"><option value="task2">Task 2 议论文</option><option value="task1">Task 1 图表</option></select></label>
+      <label>题型<select id="qtype"><option value="">自动（最少练过的）</option></select></label>
+      <label>话题<select id="topic"><option value="">自动（最弱的）</option></select></label>
+      <label>来源<select id="source"><option value="">默认</option><option value="real">真题</option><option value="generate">新生成</option></select></label>
+      <label>学生<input id="learner" value="default" size="10"></label>
+      <button id="startBtn">出题</button>
+    </div>
+    <details style="margin-top:12px"><summary class="status">用自己的题目</summary>
+      <textarea id="ownQ" style="min-height:80px;margin-top:8px" placeholder="粘贴题目，然后点“出题”"></textarea>
+    </details>
+    <p class="status" id="setupStatus"></p>
+  </section>
+
+  <section class="card hidden" id="questionCard">
+    <h2>2. 作答</h2>
+    <div class="prompt" id="prompt"></div>
+    <div class="scroll" id="table"></div>
+    <div class="meta"><span id="qinfo"></span><span id="reason"></span></div>
+    <textarea id="essay" style="margin-top:14px" placeholder="在这里写作文…"></textarea>
+    <div class="row" style="justify-content:space-between;margin-top:8px">
+      <span class="status"><span id="wc">0</span> 词 · 用时 <span id="timer">0:00</span></span>
+      <button id="submitBtn">交卷评分</button>
+    </div>
+    <p class="status" id="submitStatus"></p>
+  </section>
+
+  <section class="card hidden" id="resultCard">
+    <h2>3. 评分</h2>
+    <div class="row" style="align-items:center;gap:24px">
+      <div><div class="status">总分</div><div class="band" id="overall"></div></div>
+      <div id="review" class="warn"></div>
+    </div>
+    <div class="scroll" style="margin-top:14px"><table id="crit"></table></div>
+  </section>
+
+  <section class="card hidden" id="feedbackCard">
+    <h2>4. 反馈</h2>
+    <p id="summary"></p>
+    <div id="items"></div>
+    <div id="tips"></div>
+    <h2 style="margin-top:20px">语言错误</h2>
+    <div class="essay" id="marked"></div>
+    <div class="scroll"><table id="errors"></table></div>
+    <p class="trace" id="trace"></p>
+    <button class="ghost" id="againBtn">再练一题</button>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let session = null, opts = null, t0 = null, tick = null;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || r.statusText);
+  return data;
+}
+
+function fillTypes() {
+  const task = $("task").value, sel = $("qtype");
+  sel.innerHTML = '<option value="">自动（最少练过的）</option>' +
+    opts.question_types.filter(q => q.task === task).map(q => `<option value="${q.id}">${esc(q.name)}</option>`).join("");
+}
+
+async function init() {
+  opts = await api("/api/options");
+  $("topic").innerHTML += opts.topics.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  fillTypes();
+  if (!opts.llm) $("setupStatus").textContent = "未启用 LLM：只能用真题，评分只用模型，反馈为规则生成。";
+}
+
+function mdTable(md) {
+  const rows = md.trim().split("\n").filter(l => l.includes("|") && !/^[\s|:-]+$/.test(l));
+  if (!rows.length) return "";
+  const cells = l => l.trim().replace(/^\||\|$/g, "").split("|").map(c => esc(c.trim()));
+  const [head, ...body] = rows;
+  return `<table style="margin-top:12px"><tr>${cells(head).map(c => `<th>${c}</th>`).join("")}</tr>` +
+    body.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("") + "</table>";
+}
+
+$("task").onchange = fillTypes;
+$("startBtn").onclick = async () => {
+  $("startBtn").disabled = true; $("setupStatus").textContent = "出题中…";
+  try {
+    session = await api("/api/sessions", {learner: $("learner").value || "default", task: $("task").value,
+      question_type: $("qtype").value || null, topic: $("topic").value || null, source: $("source").value || null,
+      question: $("ownQ").value.trim() || null});
+    const q = session.question;
+    $("prompt").textContent = q.prompt;
+    $("table").innerHTML = q.data_table ? mdTable(q.data_table) : "";
+    $("qinfo").textContent = `${q.task.toUpperCase()} · ${q.minutes} 分钟 · 至少 ${q.min_words} 词 · ${q.source === "generated" ? "新生成" : "来源 " + q.source}`;
+    $("reason").textContent = session.target ? session.target.reason : "";
+    $("essay").value = ""; $("wc").textContent = "0";
+    ["questionCard"].forEach(id => $(id).classList.remove("hidden"));
+    ["resultCard", "feedbackCard"].forEach(id => $(id).classList.add("hidden"));
+    $("setupStatus").textContent = `会话 ${session.session_id}`;
+    t0 = Date.now(); clearInterval(tick);
+    tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); $("timer").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }, 1000);
+    $("essay").focus();
+  } catch (e) { $("setupStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  $("startBtn").disabled = false;
+};
+
+$("essay").oninput = () => { $("wc").textContent = ($("essay").value.match(/[A-Za-z]+(?:'[a-z]+)?/g) || []).length; };
+
+$("submitBtn").onclick = async () => {
+  if (!session) return;
+  $("submitBtn").disabled = true; $("submitStatus").textContent = "评分中：分析 → 评分 → 反馈，大约需要 1 分钟…";
+  try {
+    const s = await api(`/api/sessions/${session.session_id}/submit`, {text: $("essay").value, seconds: Math.floor((Date.now() - t0) / 1000)});
+    clearInterval(tick); render(s); $("submitStatus").textContent = "";
+  } catch (e) { $("submitStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  $("submitBtn").disabled = false;
+};
+
+$("againBtn").onclick = () => { window.scrollTo({top: 0, behavior: "smooth"}); $("startBtn").click(); };
+
+function render(s) {
+  const sc = s.score, fb = s.feedback, an = s.analysis;
+  $("overall").textContent = sc.overall.toFixed(1);
+  $("review").textContent = sc.needs_review ? `待人工复核：${sc.review_reason}` : "";
+  const f = v => v == null ? "–" : Number(v).toFixed(1);
+  $("crit").innerHTML = "<tr><th>维度</th><th>分数</th><th>模型</th><th>相似作文</th><th>LLM</th><th>区间</th><th>理由</th></tr>" +
+    Object.values(sc.criteria).map(c => `<tr><td><b>${c.criterion}</b></td><td><b>${c.band.toFixed(1)}</b></td><td>${f(c.model)}</td><td>${f(c.knn)}</td><td>${f(c.llm)}</td>` +
+      `<td>${c.interval ? c.interval.map(f).join("–") : "–"}</td><td>${esc(c.rationale)}<div class="trace">${c.evidence_ids.map(esc).join(" · ")}</div></td></tr>`).join("");
+  $("summary").textContent = fb.summary;
+  $("items").innerHTML = fb.items.map((it, i) => `<div class="item"><b>${i + 1}. [${it.criterion}] ${esc(it.issue)}</b><div>${esc(it.suggestion)}</div>` +
+    (it.example ? `<div><i>${esc(it.example)}</i></div>` : "") + `<div class="ev">依据：${it.evidence_ids.map(esc).join(" · ")}</div></div>`).join("") +
+    (fb.dropped ? `<p class="trace">另有 ${fb.dropped} 条建议因没有证据被丢弃。</p>` : "");
+  $("tips").innerHTML = fb.next_band_tips.length ? "<h2 style='margin-top:16px'>想再提高一档</h2><ul>" + fb.next_band_tips.map(t => `<li>${esc(t)}</li>`).join("") + "</ul>" : "";
+  let html = esc(s.response.text);
+  for (const e of an.errors) { const t = esc(e.text); if (t && html.includes(t)) html = html.replace(t, `<mark title="${esc(e.correction)}">${t}</mark>`); }
+  $("marked").innerHTML = html;
+  $("errors").innerHTML = an.errors.length ? "<tr><th>原文</th><th>改为</th><th>说明</th></tr>" +
+    an.errors.map(e => `<tr><td>${esc(e.text)}</td><td>${esc(e.correction)}</td><td>${esc(e.explanation)}<div class="trace">${esc(e.error_type)}</div></td></tr>`).join("") : "";
+  const calls = s.trace.reduce((a, t) => a + t.llm_calls, 0);
+  $("trace").textContent = "流程：" + s.trace.map(t => `${t.agent} ${t.ms}ms`).join(" → ") + ` · LLM 调用 ${calls} 次 · 复习：${fb.review_nodes.join(", ")}`;
+  ["resultCard", "feedbackCard"].forEach(id => $(id).classList.remove("hidden"));
+  $("resultCard").scrollIntoView({behavior: "smooth"});
+}
+init().catch(e => { $("setupStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; });
+</script>
+</body>
+</html>

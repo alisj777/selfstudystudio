@@ -31,6 +31,16 @@ ocr = [
     # 1.27+ pulls onnxruntime, which has no macOS 13 wheels
     "pymupdf>=1.24,<1.27",
 ]
+agents = [
+    "langgraph>=0.2",
+]
+web = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+scoring = [
+    "scikit-learn>=1.4",
+]
 
 [project.scripts]
 ielts-tutor = "ielts_tutor.cli:app"

@@ -95,7 +95,9 @@ class HybridIndex:
     ) -> list[Hit]:
         """`bm25_query` overrides the keyword-side text (e.g. glossary-expanded).
         `symmetric=True` embeds the query like a document (essay-to-essay similarity)
-        instead of as a short search query."""
+        instead of as a short search query, and ranks by the dense side only: keyword overlap
+        between whole essays mostly reflects the shared topic, and BM25 over a 300-word query
+        is slow on thousands of documents."""
         if not self.docs:
             return []
         candidates = self.filter_ids(filters)
@@ -104,6 +106,10 @@ class HybridIndex:
         embed = self.embedder.embed if symmetric else self.embedder.embed_query
         qvec = embed([query])[0]
         dense = self._vectors[candidates] @ qvec
+        if symmetric:
+            order = np.argsort(-dense, kind="stable")[:k]
+            return [Hit(doc=self.docs[candidates[i]], score=float(dense[i]), dense=float(dense[i]), bm25=0.0)
+                    for i in order]
         bm25 = self._bm25_scores(bm25_query or query)[candidates]
 
         dense_rank = np.empty_like(candidates)

@@ -345,5 +345,184 @@ def import_scored(
     typer.echo(f"wrote {write_jsonl(out, samples)} samples to {out}")
 
 
+# ---------------------------------------------------------------- M2: writing loop
+
+
+def _scorer_samples():
+    from .rag.build import load_samples
+    from .writing.scorer import CRITERIA
+
+    s = get_settings()
+    return [x for x in load_samples(s.exam_dir / "scoring") if x.task == "task2" and all(c in x.scores for c in CRITERIA)]
+
+
+def _scorer_tools():
+    from .importers.textquality import Vocab
+    from .writing.scorer import EmbeddingCache
+
+    s = get_settings()
+    return EmbeddingCache(get_embedder(s), s.index_dir.parent / "cache" / "scorer" / "embeddings.json"), Vocab.load()
+
+
+@app.command("train-scorer")
+def train_scorer(regressor: str = typer.Option("gbr", help="gbr (gradient boosting) | ridge")) -> None:
+    """Train the light writing score model on the scored Task 2 essays (holdout excluded)."""
+    from .writing.scorer import WritingScorer
+
+    s = get_settings()
+    samples = _scorer_samples()
+    cache, vocab = _scorer_tools()
+    scorer = WritingScorer(regressor=regressor)
+    cv = scorer.fit(samples, cache, vocab)
+    cache.flush()
+    path = s.index_dir.parent / "models" / "writing_scorer.pkl"
+    scorer.save(path)
+    typer.echo(f"trained on {len(samples)} essays -> {path}")
+    for c, m in cv.items():
+        typer.echo(f"  {c}: 5-fold QWK model {m['model']['qwk']}, kNN {m['knn']['qwk']}, fused {m['fused']['qwk']} "
+                   f"(within 0.5: {m['fused']['within_0.5']}, weight on model {m['w_model']})")
+
+
+@app.command("eval-scorer")
+def eval_scorer(
+    llm: int = typer.Option(0, "--llm", help="Also run the LLM judge on this many held-out essays (costs API calls)"),
+) -> None:
+    """Evaluate the score model on the held-out essays; with --llm, fit the model/kNN/LLM fusion weights."""
+    from .rag.build import load_jsonl
+    from .rag.schema import ScoredSample
+    from .writing.evaluate import evaluate
+    from .writing.scorer import WritingScorer
+
+    s = get_settings()
+    models = s.index_dir.parent / "models"
+    scorer = WritingScorer.load(models / "writing_scorer.pkl")
+    holdout = load_jsonl(s.exam_dir / "holdout" / "btnotpt_holdout.jsonl", ScoredSample)
+    cache, vocab = _scorer_tools()
+    rag = client = None
+    if llm:
+        from .llm import get_llm
+
+        rag = load_multirag(s.index_dir, get_embedder(s), KnowledgeGraph.from_json(_kg_path()), _glossary())
+        client = get_llm(s)
+    rep = evaluate(scorer, holdout, cache, vocab, rag=rag, llm=client, n_llm=llm,
+                   judge_cache=s.index_dir.parent / "eval" / f"llm_judge_{s.llm_model}.jsonl",
+                   progress=lambda d, n: typer.echo(f"  judged {d}/{n}") if d % 10 == 0 or d == n else None)
+    typer.echo(f"held-out essays: {rep['n']}")
+    typer.echo(f"  {'':5} {'source':10} {'QWK':>6} {'r':>6} {'exact':>6} {'±0.5':>6} {'MAE':>6}")
+    for c, srcs in rep["sources"].items():
+        for name, m in srcs.items():
+            typer.echo(f"  {c:5} {name:10} {m['qwk']:6.3f} {m['pearson']:6.3f} {m['exact']:6.3f} {m['within_0.5']:6.3f} {m['mae']:6.3f}")
+    m = rep["overall"]["model+knn"]
+    typer.echo(f"  overall model+knn: QWK {m['qwk']}, within 0.5 {m['within_0.5']}")
+    if "with_llm" in rep:
+        typer.echo(f"\nLLM judge on {rep['llm_judged']} essays:")
+        for c, d in rep["with_llm"].items():
+            typer.echo(f"  {c}: model+knn QWK {d['model+knn']['qwk']}, LLM {d['llm']['qwk']}, "
+                       f"fused (2-fold) {d['fused (2-fold)']['qwk']}  weights {d['weights']}")
+        path = models / "fusion.json"
+        path.write_text(json.dumps({"task2": rep["weights"]}, indent=1))
+        typer.echo(f"fusion weights -> {path}")
+    if llm:
+        from .rag.build import load_samples
+        from .writing.evaluate import official_check
+
+        official = [x for x in load_samples(s.exam_dir / "scoring" / "private")
+                    if x.rater == "official" and x.response_text and (x.quality is None or x.quality >= 0.9)]
+        rows = official_check(scorer, official, cache, vocab, rag, client,
+                              s.index_dir.parent / "eval" / f"llm_judge_{s.llm_model}.jsonl")
+        typer.echo(f"\nreal examiners' bands ({len(rows)} official sample essays):")
+        for r in rows:
+            typer.echo(f"  {r['id']:28} {r['task']}  examiner {r['examiner']}  model {r['model'] or '-'}  LLM {r['llm']}")
+        for src in ("model", "llm"):
+            d = [abs(r[src] - r["examiner"]) for r in rows if r[src] is not None]
+            if d:
+                typer.echo(f"  {src}: mean |diff| {sum(d) / len(d):.2f}, within 0.5: {sum(x <= 0.5 for x in d)}/{len(d)}")
+
+
+write_app = typer.Typer(help="Writing practice: get a question, submit an essay, see your profile")
+app.add_typer(write_app, name="write")
+
+
+def _tutor(no_llm: bool):
+    from .agents.orchestrator import WritingTutor
+    from .agents.toolkit import Toolkit
+
+    return WritingTutor(Toolkit.load(use_llm=not no_llm))
+
+
+@write_app.command("start")
+def write_start(
+    task: str = typer.Option("task2", help="task1 | task2"),
+    topic: str = typer.Option(None, help="Topic id or words, e.g. 'online education'"),
+    question_type: str = typer.Option(None, help="e.g. qt.writing.t2.opinion"),
+    source: str = typer.Option(None, help="real (a past question) | generate (a new one, uses the LLM)"),
+    question: str = typer.Option(None, help="Use your own question instead"),
+    learner: str = typer.Option("default", help="Learner id"),
+    no_llm: bool = typer.Option(False, "--no-llm", help="Do not call the LLM"),
+) -> None:
+    """Plan and set a writing question; prints the session id to submit against."""
+    req = {k: v for k, v in {"task": task, "topic": topic, "question_type": question_type, "source": source,
+                             "question": question}.items() if v}
+    session = _tutor(no_llm).start(learner, **req)
+    q = session.question
+    typer.echo(f"session: {session.session_id}   ({session.target.reason})")
+    typer.echo(f"\nWriting {q.task.upper()} - {q.minutes} minutes, at least {q.min_words} words\n")
+    typer.echo(q.prompt)
+    if q.data_table:
+        typer.echo("\n" + q.data_table)
+    typer.echo(f"\nsubmit: ielts-tutor write submit {session.session_id} essay.txt")
+
+
+@write_app.command("submit")
+def write_submit(
+    session_id: str,
+    essay: Path = typer.Argument(..., help="Text file with your essay"),
+    no_llm: bool = typer.Option(False, "--no-llm", help="Model score only, rule-based feedback"),
+    as_json: bool = typer.Option(False, "--json", help="Print the whole session as JSON"),
+) -> None:
+    """Score an essay and give feedback (analysis -> score -> feedback -> learner model)."""
+    session = _tutor(no_llm).submit(session_id, essay.read_text(encoding="utf-8"))
+    if as_json:
+        typer.echo(session.model_dump_json(indent=1))
+        return
+    sc, fb = session.score, session.feedback
+    typer.echo(f"Overall band {sc.overall}" + ("   [needs review: " + sc.review_reason + "]" if sc.needs_review else ""))
+    for c, cs in sc.criteria.items():
+        src = ", ".join(f"{k} {v}" for k, v in (("model", cs.model), ("kNN", cs.knn), ("LLM", cs.llm)) if v is not None)
+        typer.echo(f"  {c:4} {cs.band:<4} ({src})  {cs.rationale[:200]}")
+    if session.analysis.errors:
+        typer.echo("\nErrors:")
+        for e in session.analysis.errors[:10]:
+            typer.echo(f"  '{e.text}' -> '{e.correction}'  {e.explanation}")
+    typer.echo(f"\n{fb.summary}")
+    for i, it in enumerate(fb.items, 1):
+        typer.echo(f"  {i}. [{it.criterion}] {it.issue}\n     {it.suggestion}" + (f"\n     e.g. {it.example}" if it.example else "")
+                   + f"\n     evidence: {', '.join(it.evidence_ids)}")
+    for t in fb.next_band_tips:
+        typer.echo(f"  * {t}")
+    calls = sum(s.llm_calls for s in session.trace)
+    typer.echo(f"\nreview next: {', '.join(fb.review_nodes)}\ntrace: " + " -> ".join(f"{s.agent}({s.ms}ms)" for s in session.trace)
+               + f"; LLM calls {calls}")
+
+
+@write_app.command("profile")
+def write_profile(learner: str = typer.Option("default")) -> None:
+    """Show the learner's estimated criterion bands and weak grammar points."""
+    from .agents.learner import load_learner, summary
+
+    s = get_settings()
+    typer.echo(json.dumps(summary(load_learner(learner, s.index_dir.parent / "learners")), ensure_ascii=False, indent=1))
+
+
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8000, no_llm: bool = typer.Option(False, "--no-llm")) -> None:
+    """Run the local web app (writing practice in the browser)."""
+    import uvicorn
+
+    from .web.app import create_app
+
+    uvicorn.run(create_app(use_llm=not no_llm), host=host, port=port)
+
+
 if __name__ == "__main__":
     app()

@@ -3,7 +3,7 @@
 雅思自学 AI tutor：知识图谱 + 三路 RAG（语料 / 评分 / 话题）+ 多 Agent 测评链。
 设计文档：https://claude.ai/artifact/XP7BJaHq2FuYpyEH9LQppf
 
-当前进度：**M1 数据与知识图谱**（Agent 与评分模型在后续里程碑）。
+当前进度：M1 数据与知识图谱已完成；**M2 写作闭环**（出题 → 作答 → 评分 → 反馈）已跑通，评分模型的准确度还没达到目标，见下文。
 
 ## 快速开始
 
@@ -12,6 +12,7 @@ uv sync                      # 核心依赖
 uv sync --extra anthropic    # 使用 Claude；或 --extra openai（OpenAI / Ollama / vLLM）
 uv sync --extra embeddings   # 语义嵌入（默认 BAAI/bge-small-en-v1.5）
 uv sync --extra ocr          # PDF 渲染，给扫描版做 OCR（另需 brew install tesseract tesseract-lang）
+uv sync --extra agents --extra web --extra scoring   # M2：LangGraph、FastAPI、scikit-learn
 cp .env.example .env         # 填入 API key；.env 中的值优先于 shell 里导出的同名变量
 
 uv run ielts-tutor build                                   # 加载图谱、校验、建三路索引 -> var/
@@ -24,6 +25,11 @@ uv run ielts-tutor import-ielts-org                        # 下载 ielts.org �
 uv run ielts-tutor import-cambridge "data/ielts/剑4-20真题+解析+音频"   # 解析你自己的剑桥真题 PDF + 音频 + 答案
 uv run ielts-tutor import-explanations "data/ielts/剑4-20真题+解析+音频" # OCR 中文解析书并按套题切分
 uv run ielts-tutor check 17 1 listening my_answers.txt      # 判分 + 分数段估算 + 错题解析
+uv run ielts-tutor train-scorer                             # 训练写作评分模型 -> var/models/
+uv run ielts-tutor eval-scorer [--llm 150]                  # 测试集评估；--llm 时拟合融合权重（花 API 费用）
+uv run ielts-tutor write start --topic "online education"   # 出题（--source generate 用 LLM 出新题）
+uv run ielts-tutor write submit <session_id> essay.txt      # 评分 + 反馈（--no-llm 只用模型）
+uv run ielts-tutor serve                                    # 网页版：http://127.0.0.1:8000
 uv run pytest
 ```
 
@@ -42,6 +48,9 @@ uv run pytest
 | `src/ielts_tutor/rag/` | 嵌入、BM25 + 向量混合索引、三路检索器、RRF 融合、建索引 |
 | `src/ielts_tutor/llm/` | 可切换 LLM：Anthropic SDK / OpenAI 兼容接口 / 测试用 Fake |
 | `src/ielts_tutor/importers/` | 各数据源导入：剑桥真题、答案页、中文解析 OCR、ielts.org |
+| `src/ielts_tutor/agents/` | M2 多 Agent 写作闭环：规划、出题、作答分析、评分、反馈、学生建模，LangGraph 编排 |
+| `src/ielts_tutor/writing/` | 写作特征、评分模型（特征 + 嵌入 + 梯度提升）、LLM 考官、评估与融合权重 |
+| `src/ielts_tutor/web/` | FastAPI 接口 + 单页网页 |
 | `src/ielts_tutor/grading/` | 客观题判分（答案匹配、原始分换算分数段）；写作/口语评分在后续里程碑 |
 
 ## 检索方案与评测
@@ -93,3 +102,30 @@ uv run pytest
 - 学术类之后、没有 Reading Passage 的套题，按 General Training A/B 处理。
 
 判错时，在对应套题、技能和 Part 的解析里，找写有题号或正确答案（"答案为 …"）的那一段。听力约 75%、阅读约 70% 的题能找到解析。解析是中文，英文嵌入模型用不上，所以不进检索索引，只按书、套题和题号直接查。
+
+## M2 写作闭环
+
+一次练习分两步：`start` 由**规划**选题型、话题和薄弱维度，**出题**找一道真题或让 LLM 写新题（新题与真题的相似度超过 0.92，或缺少该题型的固定问法时重写，最多 2 次）；学生写完后 `submit` 依次运行：
+
+1. **作答分析**：词数、段落、句长、MTLD、连接词等特征；LLM 找出语言错误，只保留原文里确实存在、错误类型是图谱节点的那些。
+2. **评分**：评分模型 + 相似作文（k-NN）+ LLM 考官，按融合权重合成四项分，总分按雅思规则取整。LLM 考官会拿到模型分附近几档的官方评分描述、相似作文和考官评语，每项给出理由和证据 id。LLM 与模型相差超过 1 分时，退回作答分析复查一次；仍然不一致就标记"待人工复核"。Task 1 还没有训练数据，一律标记待复核。
+3. **反馈**：针对下一档评分描述、考官评语和范文给出 3–6 条建议，每条必须引用本次检索到的证据，否则丢弃。
+4. **学生建模**：更新各评分维度、题型、话题和语法点的掌握度（滑动平均，M4 换成 BKT），下次规划据此选题。
+
+每次会话的完整过程（检索证据、各来源分数、LLM 输出、各步耗时与调用次数）保存在 `var/sessions/<id>.json`，学生档案在 `var/learners/`。一次带 LLM 的练习约 4 次调用（用真题时 3 次，触发复查时再加 2 次）。
+
+### 评分模型的现状（2026-11-23）
+
+轻量模型：手工特征 + bge-small 作文向量 + 题文相似度，四项分各一个梯度提升回归（Ridge 明显更差），训练集是 btnotpt 的 5,133 篇 Task 2，在留出的 908 篇上：
+
+| | TR | CC | LR | GRA | 总分 |
+| --- | --- | --- | --- | --- | --- |
+| QWK | 0.50 | 0.45 | 0.28 | 0.27 | 0.43 |
+| 相差 ≤ 0.5 分 | 67% | 71% | 72% | 79% | 78% |
+
+离"可用"还有距离，主要瓶颈是**训练数据的标签不可信**：728 篇 8 分作文的四项分全是 8/8/8/8，5.5–6.5 分只集中在几种固定组合，抽看的"8 分"作文语言明显不到 8 分，像是批量生成的分数。因此：
+
+- k-NN 先验几乎没用（QWK 约 0.07）：语义相似的作文只是话题相近。
+- LLM 考官（gpt-5.5，抽 149 篇）与这些标签的 QWK 只有 0.2–0.34，按它拟合出的融合权重几乎不给 LLM 分量（`var/models/fusion.json`）；但对照 12 篇**真考官**评分的作文（剑17、ielts.org），LLM 9/12 篇相差在 0.5 分以内，平均差 0.62；模型 4/6 篇，平均差 0.67，两者都普遍偏低。
+
+改进方向：换用或自建可信的人工标注数据（这是最关键的一步）；用真考官样本校准整体偏差；在 GPU 上微调 DeBERTa（设计文档 6.1）。
