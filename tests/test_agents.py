@@ -145,7 +145,7 @@ def test_web_api_runs_a_session(tmp_path, kg, rag, scorer_parts):
     from ielts_tutor.web.app import create_app
 
     client = TestClient(create_app(tutor=_tutor(tmp_path, kg, rag, scorer_parts)))
-    assert "雅思写作练习" in client.get("/").text
+    assert "雅思自学练习" in client.get("/").text
     opts = client.get("/api/options").json()
     assert opts["llm"] and any(q["task"] == "task1" for q in opts["question_types"])
     s = client.post("/api/sessions", json={"learner": "web", "question": "Discuss online learning."}).json()
