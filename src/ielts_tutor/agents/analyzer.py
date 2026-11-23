@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from ..kg.schema import NodeType
 from ..llm import Message
 from ..writing.features import extract
-from .state import AnalysisReport, ErrorItem, Session
+from .state import AnalysisReport, ErrorItem, Session, skill_of
 from .toolkit import Toolkit, agent
 
 MAX_ERRORS = 25
@@ -37,11 +37,20 @@ def _llm_analysis(session: Session, tk: Toolkit, focus: list[str]) -> tuple[list
     q, essay = session.question, session.response.text
     err_nodes = tk.kg.nodes(NodeType.ERROR_TYPE)
     types = "\n".join(f"- {n.id}: {n.name}" for n in err_nodes)
-    system = ("You are an experienced IELTS writing examiner's assistant. Find language errors and describe the "
-              "essay's organisation and task response. Quote error spans exactly as written. Do not score.")
-    user = (f"IELTS Writing {q.task.upper()} question:\n{q.prompt}\n"
-            + (f"\nData:\n{q.data_table}\n" if q.data_table else "")
-            + f"\nEssay:\n<<<\n{essay}\n>>>\n\nError types:\n{types}\n"
+    if skill_of(q.task) == "speaking":
+        system = ("You are an experienced IELTS speaking examiner's assistant. The answer is an automatic transcript "
+                  "of speech: ignore punctuation and capitalisation, and do not count fillers (um, er) as grammar "
+                  "errors. Find grammar and word-choice errors, and describe how the answer opens, develops and "
+                  "ends (use the introduction/body/conclusion fields for that) and whether it answers the "
+                  "question fully. Quote error spans exactly as transcribed. Do not score.")
+        head = f"IELTS Speaking {q.task.replace('part', 'Part ')}:\n{q.prompt}\n\nTranscript:\n<<<\n{essay}\n>>>\n"
+    else:
+        system = ("You are an experienced IELTS writing examiner's assistant. Find language errors and describe the "
+                  "essay's organisation and task response. Quote error spans exactly as written. Do not score.")
+        head = (f"IELTS Writing {q.task.upper()} question:\n{q.prompt}\n"
+                + (f"\nData:\n{q.data_table}\n" if q.data_table else "")
+                + f"\nEssay:\n<<<\n{essay}\n>>>\n")
+    user = (head + f"\nError types:\n{types}\n"
             + (f"\nThe scorer asked for a closer look at: {', '.join(focus)}.\n" if focus else "")
             + f"\nList up to {MAX_ERRORS} of the most important errors. Write explanations in "
             + ("Simplified Chinese" if tk.lang == "zh" else "English") + "; keep quoted text and corrections in English.")
@@ -69,9 +78,17 @@ def analyze(session: Session, tk: Toolkit) -> str:
     if tk.llm:
         errors, structure, notes = _llm_analysis(session, tk, focus)
         feats.grammar_errors_per_100w = 100 * len(errors) / max(feats.words, 1)
+    speaking = skill_of(q.task) == "speaking"
     if feats.words < q.min_words:
-        notes.insert(0, f"under length: {feats.words} words (minimum {q.min_words})")
-    session.analysis = AnalysisReport(features={k: round(v, 4) for k, v in zip(feats.names(), feats.vector())},
+        notes.insert(0, f"short answer: {feats.words} words (aim for {q.min_words}+)" if speaking
+                     else f"under length: {feats.words} words (minimum {q.min_words})")
+    values = {k: round(v, 4) for k, v in zip(feats.names(), feats.vector())}
+    if speaking and session.response.transcript:
+        from ..speech.asr import Transcript
+        from ..speech.fluency import fluency_features
+
+        values.update(fluency_features(Transcript.model_validate(session.response.transcript)))
+    session.analysis = AnalysisReport(features=values,
                                       errors=errors, structure=structure, task_notes=notes, focus=focus,
                                       llm_used=bool(tk.llm))
     session.next = None

@@ -455,6 +455,33 @@ def _tutor(no_llm: bool):
     return WritingTutor(Toolkit.load(use_llm=not no_llm))
 
 
+def _print_result(session) -> None:
+    sc, fb, f = session.score, session.feedback, session.analysis.features
+    if session.response.transcript:
+        typer.echo(f"Transcript: {session.response.text}\n")
+        typer.echo(f"Speech: {f.get('duration_s')} s, {f.get('wpm')} words/min, {f.get('pauses_per_min')} pauses/min, "
+                   f"fillers {f.get('fillers_per_100w')}/100 words, ASR confidence {f.get('asr_confidence')}\n")
+    typer.echo(f"Overall band {sc.overall}" + ("   [needs review: " + sc.review_reason + "]" if sc.needs_review else ""))
+    for c, cs in sc.criteria.items():
+        src = ", ".join(f"{k} {v}" for k, v in (("model", cs.model), ("kNN", cs.knn), ("LLM", cs.llm)) if v is not None)
+        typer.echo(f"  {c:4} {cs.band:<4} ({src})  {cs.rationale[:200]}")
+    if session.analysis.errors:
+        typer.echo("\nErrors:")
+        for e in session.analysis.errors[:10]:
+            typer.echo(f"  '{e.text}' -> '{e.correction}'  {e.explanation}")
+    typer.echo(f"\n{fb.summary}")
+    for i, it in enumerate(fb.items, 1):
+        typer.echo(f"  {i}. [{it.criterion}] {it.issue}\n     {it.suggestion}" + (f"\n     e.g. {it.example}" if it.example else "")
+                   + f"\n     evidence: {', '.join(it.evidence_ids)}")
+    for t in fb.next_band_tips:
+        typer.echo(f"  * {t}")
+    calls = sum(s.llm_calls for s in session.trace)
+    typer.echo(f"\nreview next: {', '.join(fb.review_nodes)}\ntrace: " + " -> ".join(f"{s.agent}({s.ms}ms)" for s in session.trace)
+               + f"; LLM calls {calls}")
+
+
+
+
 @write_app.command("start")
 def write_start(
     task: str = typer.Option("task2", help="task1 | task2"),
@@ -490,24 +517,7 @@ def write_submit(
     if as_json:
         typer.echo(session.model_dump_json(indent=1))
         return
-    sc, fb = session.score, session.feedback
-    typer.echo(f"Overall band {sc.overall}" + ("   [needs review: " + sc.review_reason + "]" if sc.needs_review else ""))
-    for c, cs in sc.criteria.items():
-        src = ", ".join(f"{k} {v}" for k, v in (("model", cs.model), ("kNN", cs.knn), ("LLM", cs.llm)) if v is not None)
-        typer.echo(f"  {c:4} {cs.band:<4} ({src})  {cs.rationale[:200]}")
-    if session.analysis.errors:
-        typer.echo("\nErrors:")
-        for e in session.analysis.errors[:10]:
-            typer.echo(f"  '{e.text}' -> '{e.correction}'  {e.explanation}")
-    typer.echo(f"\n{fb.summary}")
-    for i, it in enumerate(fb.items, 1):
-        typer.echo(f"  {i}. [{it.criterion}] {it.issue}\n     {it.suggestion}" + (f"\n     e.g. {it.example}" if it.example else "")
-                   + f"\n     evidence: {', '.join(it.evidence_ids)}")
-    for t in fb.next_band_tips:
-        typer.echo(f"  * {t}")
-    calls = sum(s.llm_calls for s in session.trace)
-    typer.echo(f"\nreview next: {', '.join(fb.review_nodes)}\ntrace: " + " -> ".join(f"{s.agent}({s.ms}ms)" for s in session.trace)
-               + f"; LLM calls {calls}")
+    _print_result(session)
 
 
 @write_app.command("profile")
@@ -517,6 +527,35 @@ def write_profile(learner: str = typer.Option("default")) -> None:
 
     s = get_settings()
     typer.echo(json.dumps(summary(load_learner(learner, s.index_dir.parent / "learners")), ensure_ascii=False, indent=1))
+
+
+speak_app = typer.Typer(help="Speaking practice: get a Part 1/2/3 question, submit a recording")
+app.add_typer(speak_app, name="speak")
+
+
+@speak_app.command("start")
+def speak_start(
+    part: int = typer.Option(2, help="1, 2 or 3"),
+    topic: str = typer.Option(None, help="Topic id or words"),
+    learner: str = typer.Option("default"),
+) -> None:
+    """Pick a speaking question from the books; prints the session id."""
+    req = {k: v for k, v in {"task": f"part{part}", "topic": topic}.items() if v}
+    session = _tutor(True).start(learner, **req)
+    typer.echo(f"session: {session.session_id}\n\nSpeaking Part {part} (about {session.question.minutes} minutes)\n")
+    typer.echo(session.question.prompt)
+    typer.echo(f"\nrecord your answer, then: ielts-tutor speak submit {session.session_id} answer.m4a")
+
+
+@speak_app.command("submit")
+def speak_submit(
+    session_id: str,
+    audio: Path = typer.Argument(..., help="Recording: wav, m4a, mp3, webm ..."),
+    no_llm: bool = typer.Option(False, "--no-llm", help="Rule-based scores and feedback only"),
+) -> None:
+    """Transcribe the recording on this machine, then analyse, score and give feedback."""
+    session = _tutor(no_llm).submit_audio(session_id, audio.read_bytes(), audio.suffix or ".wav")
+    _print_result(session)
 
 
 @app.command()

@@ -62,12 +62,12 @@ class Script:
                 {"text": "can not", "correction": "cannot", "error_type": "err.made_up", "explanation": "拼写"}],
                 "introduction": "clear position", "body": "two ideas", "conclusion": "restates",
                 "task_notes": ["position clear"]}
-        if "certified IELTS writing examiner" in system:
+        if "certified IELTS" in system:
             self.judge_calls += 1
-            crits = ["TR", "CC", "LR", "GRA"]
+            crits = re.search(r"Score these criteria: ([A-Z, ]+)\.", user).group(1).split(", ")
             return {"criteria": [{"criterion": c, "band": b, "rationale": f"{c} reason",
                                   "evidence_ids": ids[:1] + ["not-an-id"]} for c, b in zip(crits, self.judge_bands)]}
-        if "writing coach" in system:
+        if "coach" in system:
             return {"summary": "整体清楚", "next_band_tips": ["develop ideas"], "items": [
                 {"criterion": "GRA", "issue": "主谓一致", "suggestion": "check verbs", "example": "courses are",
                  "evidence_ids": ids[:1]},
@@ -168,3 +168,27 @@ def test_default_fusion_is_half_model_half_llm(tmp_path, kg, rag, scorer_parts):
     s = tutor.submit(tutor.start(question="Discuss online learning.").session_id, ESSAY)
     for c in s.score.criteria.values():
         assert c.band == round_half(0.5 * c.model + 0.5 * c.llm)
+
+
+def test_speaking_chain_from_a_recording(tmp_path, kg, rag, scorer_parts):
+    from ielts_tutor.speech.asr import Transcript, Word
+
+    words, t = [], 0.0
+    for i, w in enumerate(ESSAY.replace("\n", " ").split()[:60]):
+        t += 0.9 if i % 12 == 0 else 0.05  # a pause every 12 words
+        words.append(Word(text=w, start=t, end=t + 0.3, prob=0.9))
+        t += 0.3
+    fake = Transcript(text=" ".join(w.text for w in words), words=words, duration=t + 0.5)
+    tutor = _tutor(tmp_path, kg, rag, scorer_parts)
+    s = tutor.start("sam", task="part2", question="Describe a teacher who helped you. You should say ...")
+    with pytest.raises(ValueError):
+        _tutor(tmp_path, kg, rag, scorer_parts).submit_audio(
+            tutor.start(question="Discuss online learning.").session_id, b"x" * 2000)  # a writing session
+    s = tutor.submit_audio(s.session_id, b"RIFF" + b"0" * 2000, ".wav", transcriber=lambda p: fake)
+    assert set(s.score.criteria) == {"FC", "LR", "GRA", "P"} and s.score.needs_review
+    f = s.analysis.features
+    assert f["spoken_words"] == 60 and f["wpm"] > 0 and f["pauses_per_min"] > 0
+    assert s.score.criteria["P"].llm is None and s.score.criteria["P"].model is not None  # rule only
+    assert s.score.criteria["LR"].llm == 6.0
+    assert (tmp_path / "audio" / f"{s.session_id}.wav").exists()
+    assert json.loads((tmp_path / "learners" / "sam.json").read_text())["mastery"]["crit.speaking.FC"]

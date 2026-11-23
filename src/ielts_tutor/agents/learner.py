@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
-from .state import LearnerProfile, Mastery, Session, now
+from .state import LearnerProfile, Mastery, Session, now, skill_of
 from .toolkit import Toolkit, agent
 
 RATE = 0.3
@@ -30,7 +30,7 @@ def _update(profile: LearnerProfile, node: str, value: float) -> None:
 def update(session: Session, tk: Toolkit) -> str:
     p, sc, q = session.learner, session.score, session.question
     for c, s in sc.criteria.items():
-        _update(p, f"crit.writing.{c}", s.band / 9)
+        _update(p, f"crit.{skill_of(q.task)}.{c}", s.band / 9)
     for node in [q.question_type, *q.topic_ids]:
         if node:
             _update(p, node, sc.overall / 9)

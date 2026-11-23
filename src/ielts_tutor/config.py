@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     # "hashing" needs no download and only matches surface words (tests, offline demos).
     embedder: Literal["hashing", "sentence-transformers"] = "sentence-transformers"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Speech recognition (speaking practice), run locally with faster-whisper: tiny.en, base.en, small.en ...
+    asr_model: str = "base.en"
 
     # Query expansion glossary (relative to exam_dir); set use_glossary=false to disable.
     use_glossary: bool = True

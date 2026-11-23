@@ -3,7 +3,7 @@
 雅思自学 AI tutor：知识图谱 + 三路 RAG（语料 / 评分 / 话题）+ 多 Agent 测评链。
 设计文档：https://claude.ai/artifact/XP7BJaHq2FuYpyEH9LQppf
 
-当前进度：M1 数据与知识图谱已完成；**M2 写作闭环**（出题 → 作答 → 评分 → 反馈）已跑通，评分模型的准确度还没达到目标，见下文。
+当前进度：四科 MVP 都已跑通（写作闭环、听力/阅读判分与解析、口语录音转写与评分），网页和命令行都能用；评分准确度还需要精调，见下文。
 
 ## 快速开始
 
@@ -13,6 +13,7 @@ uv sync --extra anthropic    # 使用 Claude；或 --extra openai（OpenAI / Oll
 uv sync --extra embeddings   # 语义嵌入（默认 BAAI/bge-small-en-v1.5）
 uv sync --extra ocr          # PDF 渲染，给扫描版做 OCR（另需 brew install tesseract tesseract-lang）
 uv sync --extra agents --extra web --extra scoring   # M2：LangGraph、FastAPI、scikit-learn
+uv sync --extra speech       # 口语：本机语音识别 faster-whisper（模型首次使用时自动下载）
 cp .env.example .env         # 填入 API key；.env 中的值优先于 shell 里导出的同名变量
 
 uv run ielts-tutor build                                   # 加载图谱、校验、建三路索引 -> var/
@@ -29,7 +30,9 @@ uv run ielts-tutor train-scorer                             # 训练写作评分
 uv run ielts-tutor eval-scorer [--llm 150]                  # 测试集评估；--llm 时拟合融合权重（花 API 费用）
 uv run ielts-tutor write start --topic "online education"   # 出题（--source generate 用 LLM 出新题）
 uv run ielts-tutor write submit <session_id> essay.txt      # 评分 + 反馈（--no-llm 只用模型）
-uv run ielts-tutor serve                                    # 网页版：http://127.0.0.1:8000（写作 / 听力 / 阅读）
+uv run ielts-tutor speak start --part 2                     # 口语出题
+uv run ielts-tutor speak submit <session_id> answer.m4a     # 本机转写 + 评分 + 反馈
+uv run ielts-tutor serve                                    # 网页版：http://127.0.0.1:8000（写作 / 听力 / 阅读 / 口语）
 uv run pytest
 ```
 
@@ -50,6 +53,7 @@ uv run pytest
 | `src/ielts_tutor/importers/` | 各数据源导入：剑桥真题、答案页、中文解析 OCR、ielts.org |
 | `src/ielts_tutor/agents/` | M2 多 Agent 写作闭环：规划、出题、作答分析、评分、反馈、学生建模，LangGraph 编排 |
 | `src/ielts_tutor/writing/` | 写作特征、评分模型（特征 + 嵌入 + 梯度提升）、LLM 考官、评估与融合权重 |
+| `src/ielts_tutor/speech/` | 本机语音识别（faster-whisper，词级时间戳）与流利度特征 |
 | `src/ielts_tutor/web/` | FastAPI 接口 + 单页网页 |
 | `src/ielts_tutor/grading/` | 客观题判分（答案匹配、原始分换算分数段）；写作/口语评分在后续里程碑 |
 
@@ -133,3 +137,13 @@ uv run pytest
 - LLM 考官（gpt-5.5，抽 149 篇）与这些标签的 QWK 只有 0.2–0.34，按它拟合出的融合权重几乎不给 LLM 分量（存在 `var/models/fusion_fitted.json`，仅供参考；加 `--apply-weights` 才会启用）；但对照 12 篇**真考官**评分的作文（剑17、ielts.org），LLM 9/12 篇相差在 0.5 分以内，平均差 0.62；模型 4/6 篇，平均差 0.67，两者都普遍偏低。所以默认权重定为模型 0.5、LLM 0.5（2026-11-23 决定）。
 
 改进方向：换用或自建可信的人工标注数据（这是最关键的一步）；用真考官样本校准整体偏差；在 GPU 上微调 DeBERTa（设计文档 6.1）。
+
+## 口语（MVP）
+
+口语和写作共用同一条 Agent 链：规划按 Part 选一道剑桥口语真题；学生在网页上录音（或命令行提交音频文件）；录音保存在 `var/audio/`，用 faster-whisper 在**本机**转写（默认 `base.en`，`IELTS_ASR_MODEL` 可换 `small.en` 等），不上传任何外部服务，转写稿再交给 LLM 分析与评分。
+
+- **作答分析**：转写稿的文本特征 + 流利度特征（语速、句中/句间停顿、1 秒以上长停顿、填充词、重复、平均连续语流、识别置信度）；LLM 找语法和用词错误（忽略标点，填充词不算错）。
+- **评分**：口语没有训练数据，所以 FC = 规则估计 0.3 + LLM 0.7，LR、GRA 全靠 LLM，P 只能由识别置信度的规则估计（LLM 只看到文字）。一律标记"待人工复核"。
+- **反馈**：同写作，必须引用下一档的口语评分描述。
+
+已知局限：Whisper 会"修正"口误和语法错误、丢掉部分填充词（设计文档 6.2 提到的问题，已用带填充词的提示缓解，但没解决），所以 GRA 和 FC 可能偏高；发音分只看识别置信度，基本没有区分度，需要 GOP/MFA 等发音模型和带分数的口语数据。

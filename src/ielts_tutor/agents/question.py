@@ -37,12 +37,13 @@ def _real(session: Session, tk: Toolkit) -> Question | None:
     query = f"{topic} {qt.name if qt else ''}".strip() or "essay"
     kinds = ["real_exam", "official_sample", "question_bank"]
     seen = _done_questions(session)
-    strict = bool(session.request.get("question_type"))  # the student asked for this type
+    speaking = t.skill == "speaking"
+    strict = bool(session.request.get("question_type")) or speaking  # asked for this type / a speaking part
     filt = {"question_type": t.question_type} if strict else {}
-    hits = tk.rag.corpus.retrieve(query if strict else (topic or query), 15, skill="writing", source_types=kinds, **filt)
+    hits = tk.rag.corpus.retrieve(query if strict else (topic or query), 15, skill=t.skill, source_types=kinds, **filt)
     is_t2 = lambda h: (h.meta.get("question_type") or "qt.writing.t2").startswith("qt.writing.t2")  # noqa: E731
     hits = [h for h in hits if h.id not in seen and h.meta.get("module") in (None, "academic")
-            and is_t2(h) == (t.task == "task2")]
+            and (speaking or is_t2(h) == (t.task == "task2"))]
     if not hits:
         return None
     # The topic decides; among questions about as relevant as the best one, prefer the planned type.
@@ -50,10 +51,15 @@ def _real(session: Session, tk: Toolkit) -> Question | None:
     h = next((x for x in close if x.meta.get("question_type") == t.question_type), hits[0])
     session.add_evidence([h])
     t.question_type = h.meta.get("question_type") or t.question_type
+    min_words, minutes = _length(t.task)
     return Question(question_id=f"q-{h.id}", task=t.task, question_type=t.question_type,
                     topic_ids=h.meta.get("topic_ids") or ([t.topic_id] if t.topic_id else []),
-                    prompt=h.text, min_words=150 if t.task == "task1" else 250,
-                    minutes=20 if t.task == "task1" else 40, source=h.id, evidence_ids=[h.id])
+                    prompt=h.text, min_words=min_words, minutes=minutes, source=h.id, evidence_ids=[h.id])
+
+
+def _length(task: str) -> tuple[int, int]:
+    """Minimum words and minutes: writing task limits; for speaking, a sensible answer length."""
+    return {"task1": (150, 20), "task2": (250, 40), "part1": (60, 4), "part2": (150, 2), "part3": (120, 5)}[task]
 
 
 def _cues(tk: Toolkit, qtype: str | None) -> list[str]:
@@ -108,7 +114,7 @@ def _generate(session: Session, tk: Toolkit) -> tuple[Question | None, str]:
 @agent("question_generator")
 def generate(session: Session, tk: Toolkit) -> str:
     t = session.target
-    if t.source == "generate" and tk.llm:
+    if t.source == "generate" and tk.llm and t.skill == "writing":
         q, msg = _generate(session, tk)
         if q:
             session.question = q

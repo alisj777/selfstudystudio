@@ -51,7 +51,7 @@ def build_graph(tk: Toolkit):
 
 
 class WritingTutor:
-    """Entry point used by the CLI and the web API."""
+    """Entry point used by the CLI and the web API: writing tasks and speaking parts."""
 
     def __init__(self, tk: Toolkit):
         self.tk = tk
@@ -60,23 +60,48 @@ class WritingTutor:
     def start(self, learner_id: str = "default", **request) -> Session:
         session = Session(learner=load_learner(learner_id, self.tk.data["learners"]), request=request)
         if request.get("question"):  # the student brought their own question
-            from .state import PracticeTarget, Question
+            from .question import _length
+            from .state import PracticeTarget, Question, skill_of
 
             task = request.get("task", "task2")
-            session.target = PracticeTarget(task=task, source="real", reason="student's own question")
+            min_words, minutes = _length(task)
+            session.target = PracticeTarget(task=task, skill=skill_of(task), source="real",
+                                            reason="student's own question")
             session.question = Question(question_id=f"own-{session.session_id}", task=task, prompt=request["question"],
-                                        min_words=150 if task == "task1" else 250, source="student")
+                                        min_words=min_words, minutes=minutes, source="student")
         else:
             session = self.graph.invoke({"session": session})["session"]
         save_session(session, self.tk.data["sessions"])
         return session
 
-    def submit(self, session_id: str, text: str, seconds: int | None = None) -> Session:
+    def submit(self, session_id: str, text: str, seconds: int | None = None, **extra) -> Session:
         session = load_session(session_id, self.tk.data["sessions"])
         if session.score:
             raise ValueError(f"session {session_id} was already scored")
         session.learner = load_learner(session.learner.learner_id, self.tk.data["learners"])
-        session.response = Response(text=text, seconds_spent=seconds)
+        session.response = Response(text=text, seconds_spent=seconds, **extra)
         session = self.graph.invoke({"session": session})["session"]
         save_session(session, self.tk.data["sessions"])
         return session
+
+    def submit_audio(self, session_id: str, audio: bytes, suffix: str = ".webm", seconds: int | None = None,
+                     transcriber=None) -> Session:
+        """Speaking: keep the recording, transcribe it on this machine, then run the same chain."""
+        session = load_session(session_id, self.tk.data["sessions"])
+        if session.score:
+            raise ValueError(f"session {session_id} was already scored")
+        if not session.question or not session.question.task.startswith("part"):
+            raise ValueError("not a speaking session")
+        path = self.tk.data["sessions"].parent / "audio" / f"{session_id}{suffix}"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(audio)
+        if transcriber is None:
+            from ..speech.asr import transcribe
+
+            def transcriber(p):
+                return transcribe(p, self.tk.settings.asr_model)
+        t = transcriber(path)
+        if not t.words:
+            raise ValueError("no speech recognised in the recording")
+        return self.submit(session_id, t.text, seconds or int(t.duration), audio_path=str(path),
+                           transcript=t.model_dump())

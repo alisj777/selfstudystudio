@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -85,6 +85,24 @@ def create_app(use_llm: bool = True, tutor=None, practice=None) -> FastAPI:
             raise HTTPException(404, "unknown session") from exc
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/api/sessions/{session_id}/audio")
+    async def submit_audio(session_id: str, request: Request, seconds: int | None = None):
+        """Speaking: the raw recording as the request body (audio/webm, audio/mp4, audio/wav ...)."""
+        body = await request.body()
+        if len(body) < 1000:
+            raise HTTPException(400, "recording too short")
+        if len(body) > 50_000_000:
+            raise HTTPException(413, "recording too large")
+        kind = request.headers.get("content-type", "audio/webm").split(";")[0]
+        suffix = {"audio/webm": ".webm", "audio/mp4": ".m4a", "audio/mpeg": ".mp3", "audio/wav": ".wav",
+                  "audio/x-wav": ".wav", "audio/ogg": ".ogg", "audio/aiff": ".aiff"}.get(kind, ".webm")
+        try:
+            return tutor.submit_audio(session_id, body, suffix, seconds).model_dump()
+        except FileNotFoundError as exc:
+            raise HTTPException(404, "unknown session") from exc
+        except ValueError as exc:
+            raise HTTPException(409 if "already" in str(exc) else 400, str(exc)) from exc
 
     @app.get("/api/sessions/{session_id}")
     def get_session(session_id: str):

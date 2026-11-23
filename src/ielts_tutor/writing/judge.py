@@ -24,24 +24,31 @@ class JudgeOutput(BaseModel):
     criteria: list[_Judged]
 
 
-SYSTEM = ("You are a certified IELTS writing examiner. Score each criterion against the official band "
+SYSTEM = ("You are a certified IELTS {skill} examiner. Score each criterion against the official band "
           "descriptors provided. Judge independently: the model estimate is only a starting point. "
           "Bands are 0-9 in steps of 0.5. Cite the evidence ids you relied on.")
+SPEAKING_NOTE = ("The answer is an automatic transcript of speech: ignore punctuation and capitalisation. Use the "
+                 "measured fluency figures (speech rate, pauses, fillers) for Fluency and Coherence.")
 
 
 def judge(llm, task: str, prompt: str, essay: str, criteria: list[str], estimate: dict[str, float],
           evidence: list[Evidence], analysis_notes: str = "", lang: str = "zh") -> dict[str, _Judged]:
+    speaking = task.startswith("part")
     ev_text = "\n".join(f"[{e.id}] {e.text[:600]}" for e in evidence)
-    user = (f"IELTS Writing {task.upper()}\nQuestion:\n{prompt}\n\nEssay:\n<<<\n{essay}\n>>>\n\n"
+    head = (f"IELTS Speaking {task.replace('part', 'Part ')}\n{SPEAKING_NOTE}\nQuestion:\n{prompt}\n\n"
+            f"Transcript:\n<<<\n{essay}\n>>>\n\n") if speaking else \
+        f"IELTS Writing {task.upper()}\nQuestion:\n{prompt}\n\nEssay:\n<<<\n{essay}\n>>>\n\n"
+    user = (head +
             f"Model estimate (may be wrong): {estimate}\n\nAnalysis notes:\n{analysis_notes}\n\n"
             f"Evidence (band descriptors, scored samples, examiner comments):\n{ev_text}\n\n"
             f"Score these criteria: {', '.join(criteria)}. Write each rationale in "
             + ("Simplified Chinese, quoting the essay in English." if lang == "zh" else "English."))
-    out = llm.complete_json([Message("user", user)], JudgeOutput, system=SYSTEM)
+    out = llm.complete_json([Message("user", user)], JudgeOutput,
+                            system=SYSTEM.format(skill="speaking" if speaking else "writing"))
     known = {e.id for e in evidence}
     result = {}
     for j in out.criteria:
-        c = j.criterion.upper().replace("CRIT.WRITING.", "")
+        c = j.criterion.upper().replace("CRIT.WRITING.", "").replace("CRIT.SPEAKING.", "")
         if c in criteria:
             j.band = float(min(9.0, max(0.0, round(j.band * 2) / 2)))
             j.evidence_ids = [i for i in j.evidence_ids if i in known]

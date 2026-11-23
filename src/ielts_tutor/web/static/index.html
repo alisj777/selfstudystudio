@@ -107,26 +107,6 @@ audio { width: 100%; }
     <p class="status" id="submitStatus"></p>
   </section>
 
-  <section class="card hidden" id="resultCard">
-    <h2>3. 评分</h2>
-    <div class="row" style="align-items:center;gap:24px">
-      <div><div class="status">总分</div><div class="band" id="overall"></div></div>
-      <div id="review" class="warn"></div>
-    </div>
-    <div class="scroll" style="margin-top:14px"><table id="crit"></table></div>
-  </section>
-
-  <section class="card hidden" id="feedbackCard">
-    <h2>4. 反馈</h2>
-    <p id="summary"></p>
-    <div id="items"></div>
-    <div id="tips"></div>
-    <h2 style="margin-top:20px">语言错误</h2>
-    <div class="essay" id="marked"></div>
-    <div class="scroll"><table id="errors"></table></div>
-    <p class="trace" id="trace"></p>
-    <button class="ghost" id="againBtn">再练一题</button>
-  </section>
   </div>
 
   <div id="pane-practice" class="hidden">
@@ -159,8 +139,48 @@ audio { width: 100%; }
   </div>
 
   <div id="pane-speaking" class="hidden">
-    <section class="card"><p class="status">口语练习正在开发中。</p></section>
+    <section class="card">
+      <h2>1. 选题</h2>
+      <div class="row">
+        <label>部分<select id="spart"><option value="part1">Part 1 日常问答</option><option value="part2" selected>Part 2 个人陈述</option><option value="part3">Part 3 深入讨论</option></select></label>
+        <label>话题<select id="stopic"><option value="">自动</option></select></label>
+        <button id="sstart">出题</button>
+      </div>
+      <p class="status" id="sstatus0">录音只在本机转写，不会上传到外部服务。</p>
+    </section>
+    <section class="card hidden" id="squestion">
+      <h2>2. 作答</h2>
+      <div class="prompt" id="sprompt"></div>
+      <div class="row" style="margin-top:14px;align-items:center">
+        <button id="srec">开始录音</button>
+        <span class="status" id="sclock"></span>
+      </div>
+      <audio id="splay" controls class="hidden" style="margin-top:10px"></audio>
+      <p class="status" id="sstatus"></p>
+    </section>
   </div>
+
+  <section class="card hidden" id="resultCard">
+    <h2>3. 评分</h2>
+    <div class="row" style="align-items:center;gap:24px">
+      <div><div class="status">总分</div><div class="band" id="overall"></div></div>
+      <div id="review" class="warn"></div>
+    </div>
+    <p class="status" id="speech"></p>
+    <div class="scroll" style="margin-top:14px"><table id="crit"></table></div>
+  </section>
+
+  <section class="card hidden" id="feedbackCard">
+    <h2>4. 反馈</h2>
+    <p id="summary"></p>
+    <div id="items"></div>
+    <div id="tips"></div>
+    <h2 style="margin-top:20px" id="errTitle">语言错误</h2>
+    <div class="essay" id="marked"></div>
+    <div class="scroll"><table id="errors"></table></div>
+    <p class="trace" id="trace"></p>
+    <button class="ghost" id="againBtn">再练一题</button>
+  </section>
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -231,16 +251,20 @@ $("submitBtn").onclick = async () => {
   $("submitBtn").disabled = false;
 };
 
-$("againBtn").onclick = () => { window.scrollTo({top: 0, behavior: "smooth"}); $("startBtn").click(); };
+$("againBtn").onclick = () => { window.scrollTo({top: 0, behavior: "smooth"}); (lastResult === "speaking" ? $("sstart") : $("startBtn")).click(); };
 
 function render(s) {
   const sc = s.score, fb = s.feedback, an = s.analysis;
+  lastResult = s.response.transcript ? "speaking" : "writing";
+  const f = an.features;
+  $("speech").textContent = s.response.transcript ? `录音 ${f.duration_s} 秒 · 每分钟 ${f.wpm} 词 · 每分钟停顿 ${f.pauses_per_min} 次（句中 ${f.mid_clause_pauses_per_min}）· 填充词 ${f.fillers_per_100w}/100 词 · 识别置信度 ${f.asr_confidence}` : "";
+  $("errTitle").textContent = s.response.transcript ? "转写稿与语言错误" : "语言错误";
   $("overall").textContent = sc.overall.toFixed(1);
   $("review").textContent = sc.needs_review ? `待人工复核：${sc.review_reason}` : "";
-  const f = v => v == null ? "–" : Number(v).toFixed(1);
-  $("crit").innerHTML = "<tr><th>维度</th><th>分数</th><th>模型</th><th>相似作文</th><th>LLM</th><th>区间</th><th>理由</th></tr>" +
-    Object.values(sc.criteria).map(c => `<tr><td><b>${c.criterion}</b></td><td><b>${c.band.toFixed(1)}</b></td><td>${f(c.model)}</td><td>${f(c.knn)}</td><td>${f(c.llm)}</td>` +
-      `<td>${c.interval ? c.interval.map(f).join("–") : "–"}</td><td>${esc(c.rationale)}<div class="trace">${c.evidence_ids.map(esc).join(" · ")}</div></td></tr>`).join("");
+  const n1 = v => v == null ? "–" : Number(v).toFixed(1);
+  $("crit").innerHTML = `<tr><th>维度</th><th>分数</th><th>${lastResult === "speaking" ? "规则估计" : "模型"}</th><th>相似作文</th><th>LLM</th><th>区间</th><th>理由</th></tr>` +
+    Object.values(sc.criteria).map(c => `<tr><td><b>${c.criterion}</b></td><td><b>${c.band.toFixed(1)}</b></td><td>${n1(c.model)}</td><td>${n1(c.knn)}</td><td>${n1(c.llm)}</td>` +
+      `<td>${c.interval ? c.interval.map(n1).join("–") : "–"}</td><td>${esc(c.rationale)}<div class="trace">${c.evidence_ids.map(esc).join(" · ")}</div></td></tr>`).join("");
   $("summary").textContent = fb.summary;
   $("items").innerHTML = fb.items.map((it, i) => `<div class="item"><b>${i + 1}. [${it.criterion}] ${esc(it.issue)}</b><div>${esc(it.suggestion)}</div>` +
     (it.example ? `<div><i>${esc(it.example)}</i></div>` : "") + `<div class="ev">依据：${it.evidence_ids.map(esc).join(" · ")}</div></div>`).join("") +
@@ -257,6 +281,7 @@ function render(s) {
   $("resultCard").scrollIntoView({behavior: "smooth"});
 }
 // ---------------------------------------------------------------- tabs
+let lastResult = null;
 let tests = [], ptest = null, pt0 = null, ptick = null, current = "writing";
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
 function showTab(tab) {
@@ -265,6 +290,7 @@ function showTab(tab) {
   $("pane-writing").classList.toggle("hidden", tab !== "writing");
   $("pane-practice").classList.toggle("hidden", !["listening", "reading"].includes(tab));
   $("pane-speaking").classList.toggle("hidden", tab !== "speaking");
+  ["resultCard", "feedbackCard"].forEach(id => $(id).classList.toggle("hidden", !lastResult || lastResult !== tab));
   if (tab === "listening" || tab === "reading") loadTests();
 }
 const learnerId = () => $("learner").value || "default";
@@ -323,7 +349,58 @@ function renderPractice(r) {
 }
 $("learner").onchange = refreshProfile;
 
-init().then(refreshProfile).catch(e => { $("setupStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; });
+// ---------------------------------------------------------------- speaking
+let ssession = null, recorder = null, chunks = [], sTimer = null, sT0 = 0;
+function clock(label, seconds, done) {
+  clearInterval(sTimer); const end = Date.now() + seconds * 1000;
+  const tick = () => { const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    $("sclock").textContent = `${label} ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+    if (!left) { clearInterval(sTimer); done && done(); } };
+  tick(); sTimer = setInterval(tick, 250);
+}
+$("sstart").onclick = async () => {
+  $("sstart").disabled = true; $("sstatus0").textContent = "出题中…";
+  try {
+    ssession = await api("/api/sessions", {learner: learnerId(), task: $("spart").value, topic: $("stopic").value || null});
+    $("sprompt").textContent = ssession.question.prompt;
+    $("squestion").classList.remove("hidden"); $("splay").classList.add("hidden");
+    ["resultCard", "feedbackCard"].forEach(id => $(id).classList.add("hidden"));
+    $("sstatus0").textContent = `会话 ${ssession.session_id}`; $("sstatus").textContent = "";
+    $("srec").disabled = false; $("srec").textContent = "开始录音";
+    if (ssession.question.task === "part2") clock("准备时间", 60, () => { $("sclock").textContent = "准备结束，开始录音（1–2 分钟）"; });
+    else $("sclock").textContent = "";
+  } catch (e) { $("sstatus0").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  $("sstart").disabled = false;
+};
+$("srec").onclick = async () => {
+  if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    chunks = []; recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); clearInterval(sTimer);
+      const blob = new Blob(chunks, {type: recorder.mimeType || "audio/webm"});
+      $("splay").src = URL.createObjectURL(blob); $("splay").classList.remove("hidden");
+      $("srec").disabled = true; $("srec").textContent = "已提交";
+      $("sstatus").textContent = "转写与评分中（本机转写 + LLM 评分），大约 1 分钟…";
+      try {
+        const r = await fetch(`/api/sessions/${ssession.session_id}/audio?seconds=${Math.round((Date.now() - sT0) / 1000)}`,
+          {method: "POST", headers: {"Content-Type": blob.type.split(";")[0]}, body: blob});
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+        render(data); $("sstatus").textContent = ""; refreshProfile();
+      } catch (e) { $("sstatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; $("srec").disabled = false; $("srec").textContent = "重新录音"; }
+    };
+    recorder.start(); sT0 = Date.now();
+    $("srec").textContent = "停止并提交";
+    const limit = {part1: 240, part2: 120, part3: 300}[ssession.question.task] || 180;
+    clock("录音中，剩余", limit, () => recorder.state === "recording" && recorder.stop());
+  } catch (e) { $("sstatus").innerHTML = `<span class="err">无法使用麦克风：${esc(e.message)}</span>`; }
+};
+
+init().then(() => { $("stopic").innerHTML += opts.topics.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join(""); })
+  .then(refreshProfile).catch(e => { $("setupStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; });
 </script>
 </body>
 </html>

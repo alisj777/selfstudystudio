@@ -19,7 +19,7 @@ import json
 
 from ..writing.judge import judge
 from ..writing.scorer import overall_band, round_half
-from .state import CriterionScore, ScoreCard, Session
+from .state import CriterionScore, ScoreCard, Session, criteria_for, skill_of
 from .toolkit import Toolkit, agent
 
 REVIEW_GAP = 1.0
@@ -27,7 +27,7 @@ DEFAULT_WEIGHTS = (0.5, 0.0, 0.5)  # model, k-NN, LLM (chosen 2026-11-23, see mo
 
 
 def _criteria(task: str) -> list[str]:
-    return ["TA" if task == "task1" else "TR", "CC", "LR", "GRA"]
+    return criteria_for(task)
 
 
 def fusion_weights(tk: Toolkit, criterion: str, task: str, has_llm: bool) -> tuple[float, float, float]:
@@ -48,15 +48,68 @@ def _notes(session: Session) -> str:
     f = a.features
     lines = [f"words {int(f['words'])}, paragraphs {int(f['paragraphs'])}, mean sentence length "
              f"{f['mean_sentence_len']:.1f}, MTLD {f['mtld']:.0f}, linker types {int(f['linker_types'])}"]
+    if "wpm" in f:
+        lines.append(f"speech: {f['duration_s']} s, {f['wpm']} words/min, {f['pauses_per_min']} pauses/min "
+                     f"({f['mid_clause_pauses_per_min']} mid-clause), {f['long_pauses']} pauses over 1 s, "
+                     f"fillers {f['fillers_per_100w']}/100 words, repetitions {f['repetitions_per_100w']}/100 words, "
+                     f"mean run {f['mean_run_words']} words")
     lines += [f"structure: {k}: {v}" for k, v in a.structure.items()]
     lines += [f"task: {n}" for n in a.task_notes]
     lines += [f"error: '{e.text}' -> '{e.correction}' ({e.error_type})" for e in a.errors[:15]]
     return "\n".join(lines)
 
 
+# Speaking has no trained model yet: (rule-based, LLM) weights per criterion. The LLM reads only
+# the transcript, so Pronunciation comes from the ASR-confidence rule alone.
+SPEAKING_WEIGHTS = {"FC": (0.3, 0.7), "LR": (0.0, 1.0), "GRA": (0.0, 1.0), "P": (1.0, 0.0)}
+
+
+def _score_speaking(session: Session, tk: Toolkit) -> str:
+    from ..speech.fluency import rule_bands
+
+    q, text, f = session.question, session.response.text, session.analysis.features
+    crits = criteria_for(q.task)
+    rules = rule_bands(f) if "wpm" in f else {}
+    if tk.scorer is not None:  # rough LR/GRA proxy from the writing model when there is no LLM
+        pred = tk.scorer.predict(text, q.prompt, "task2", tk.cache, tk.vocab)
+        rules.setdefault("LR", round_half(pred.model["LR"]))
+        rules.setdefault("GRA", round_half(pred.model["GRA"]))
+    base = {c: round_half(rules.get(c, 6.0)) for c in crits}
+    evidence = [e for c in crits for e in tk.rag.rubric.descriptors(f"crit.speaking.{c}", base[c], window=1)]
+    session.add_evidence(evidence)
+    llm = {}
+    if tk.llm:
+        llm = judge(tk.llm, q.task, q.prompt, text, ["FC", "LR", "GRA"], {c: base[c] for c in ("FC", "LR", "GRA")},
+                    evidence, _notes(session), tk.lang)
+    out = {}
+    for c in crits:
+        wr, wl = SPEAKING_WEIGHTS[c]
+        parts = [(wr, rules.get(c)), (wl, llm[c].band if c in llm else None)]
+        parts = [(w, v) for w, v in parts if v is not None and w > 0] or [(1.0, rules.get(c, 6.0))]
+        band = round_half(sum(w * v for w, v in parts) / sum(w for w, _ in parts))
+        j = llm.get(c)
+        ids = j.evidence_ids if j and j.evidence_ids else [e.id for e in evidence if e.meta.get("criterion") ==
+                                                           f"crit.speaking.{c}" and e.meta.get("band") == int(band)][:1]
+        out[c] = CriterionScore(criterion=c, band=band, model=rules.get(c), llm=j.band if j else None,
+                                rationale=j.rationale if j else ("由识别置信度估计" if c == "P" else
+                                                                 "由语速、停顿、填充词估计" if c == "FC" else ""),
+                                evidence_ids=ids)
+    session.score = ScoreCard(
+        criteria=out, overall=overall_band({"TR": out["FC"].band, "CC": out["LR"].band, "LR": out["GRA"].band,
+                                            "GRA": out["P"].band}),
+        model_version="speaking-rules-0" + ("+llm" if llm else ""),
+        weights={c: [SPEAKING_WEIGHTS[c][0], 0.0, SPEAKING_WEIGHTS[c][1]] for c in crits},
+        needs_review=True,
+        review_reason="口语还没有训练好的评分模型：流利度和发音由规则估计（发音只看识别置信度），词汇和语法由 LLM 根据转写稿判断",
+    )
+    return f"overall {session.score.overall} " + " ".join(f"{c}={x.band}" for c, x in out.items()) + " (needs review)"
+
+
 @agent("scorer")
 def score(session: Session, tk: Toolkit) -> str:
     q, essay = session.question, session.response.text
+    if skill_of(q.task) == "speaking":
+        return _score_speaking(session, tk)
     crits = _criteria(q.task)
     model, knn, interval, neighbours = {}, {}, {}, []
     if tk.scorer is not None:

@@ -11,7 +11,17 @@ from pydantic import BaseModel, Field
 
 from ..rag.schema import Evidence
 
-Task = Literal["task1", "task2"]
+Task = Literal["task1", "task2", "part1", "part2", "part3"]  # Writing tasks, Speaking parts
+
+
+def skill_of(task: str) -> str:
+    return "speaking" if task.startswith("part") else "writing"
+
+
+def criteria_for(task: str) -> list[str]:
+    if task.startswith("part"):
+        return ["FC", "LR", "GRA", "P"]
+    return ["TA" if task == "task1" else "TR", "CC", "LR", "GRA"]
 
 
 def now() -> str:
@@ -45,9 +55,11 @@ class Question(BaseModel):
 
 
 class Response(BaseModel):
-    text: str
+    text: str  # the essay, or the transcript of a spoken answer
     submitted_at: str = Field(default_factory=now)
     seconds_spent: int | None = None
+    audio_path: str | None = None  # speaking: the recording (kept locally)
+    transcript: dict | None = None  # speaking: speech.asr.Transcript with word timings
 
 
 class ErrorItem(BaseModel):
